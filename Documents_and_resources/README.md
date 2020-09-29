@@ -5,3 +5,4 @@
 - [NETHACK SPOILERS](https://sites.google.com/view/evasroguelikegamessite/list-of-nethack-spoilers)
 - [Exploration paper for NETHACK](https://arxiv.org/pdf/1711.03087.pdf)
 - [Please try to read some of the AlphaStar papers as there's some overlap with our work!]
+- [Advancement of learning algorithms for games](https://arxiv.org/pdf/1912.10944.pdf)
