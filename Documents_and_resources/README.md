@@ -7,3 +7,4 @@
 - [Please try to read some of the AlphaStar papers as there's some overlap with our work!]
 - [Advancement of learning algorithms for games](https://arxiv.org/pdf/1912.10944.pdf)
 - [Some fancy DQN implementations to get inspiration from](https://github.com/deepmind/dqn_zoo)
+- [EXPLORATION BY RANDOM NETWORK DISTILLATION](https://arxiv.org/abs/1810.12894)
