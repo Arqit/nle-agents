@@ -3,73 +3,17 @@ import torch.nn as nn
 import torch
 import numpy as np
 
-# We can spend the whole of Tuesday,ensuring that we thoroughly understand what exactly is going on in their model--> This will then help when we do the DQN approach (hopefully friday)
+
+# Read the DQN paper
+# This will then help when we do the DQN approach (hopefully friday)
 # We'll also need to include the ResetEnvironment in ours to be able to train successively for many rounds (should pay attention to how we maintain state between episodes where necessary)
-# Our act function will definitely be different to theirs
-# We dont need their learn function
 # We'll probably take some inspiration from their train function
-# I think that I've extracted all the important things that we need to be working with (besides for the ResetEnv that can be directly copied over)
 
-def _step_to_range(delta, num_steps):
-    """Range of `num_steps` integers with distance `delta` centered around zero."""
-    return delta * torch.arange(-num_steps // 2, num_steps // 2)
 
-# This is the thing we will call to crop the world as desired... This needs some looking into
-class Crop(nn.Module):
-    def __init__ (self, height,width,target_size):
-        super(Crop,self).__init__()
+# def Crop(the world, agents position, the radius around the agent that we want to crop)
+# Think maybe via index slicing
 
-        self.width = width
-        self.height = height
-        # I have no clue what does below do (as well as the 'register_buffer stuff')
-        # Expand is to just stretch the input over a different shape (presumably by repeating values in a nice way)
-        # Whats happening with the dividing?
-        width_grid = _step_to_range(2 / (self.width - 1), self.target_size)[None, :].expand(self.height_target, -1) # -1 means leave the dimension unchanged
-        height_grid = _step_to_range(2 / (self.height - 1), self.target_size)[:, None].expand(-1, self.width_target)
-        # From what I read, buffers are weights and biases that we need but are not trained by an optimizer (but we want to be able to save the weights)... It is not treated as a module of a model
-        # Whats the point of the weights if we're not going to train them to do useful stuff
-        # I dont see why are we working with weights here... I expect to just do index slicing of the world around the agent?
-
-        # Check where will this be used?
-        self.register_buffer("width_grid", width_grid.clone())
-        self.register_buffer("height_grid", height_grid.clone())
-
-    def forward(self, inputs,coordinates):
-        # Check what are they treating as the input
-         """Calculates centered crop around given x,y coordinates.
-        Args:
-           inputs [B x H x W] ( The world) Whats the B for?... Maybe they stacking like us?) depth could be the glyphs, colors and chars
-           coordinates [B x 2] x,y coordinates
-        Returns:
-           [B x H' x W'] inputs cropped and centered around x,y coordinates.
-        """
-        assert inputs.shape[1] == self.height
-        assert inputs.shape[2] == self.width
-
-        print(inputs.shape)
-        print(coordinates)
-
-        inputs = inputs[:,Nones,:,:].float() # Know clue why are we doing this
-        x = coordinates[:,0]# Why are we slicing weirdly? Why not just coordinates[0]?
-        y = coordinates[:,1]
-
-        # No clue what is this supposed to achieve
-        x_shift = 2 / (self.width - 1) * (x.float() - self.width // 2)
-        y_shift = 2 / (self.height - 1) * (y.float() - self.height // 2)
-        # Look into what is this grid?
-        grid = torch.stack(
-            [
-                self.width_grid[None, :, :] + x_shift[:, None, None],
-                self.height_grid[None, :, :] + y_shift[:, None, None],
-            ],
-            dim=3,
-        )
-
-        return (
-            torch.round(F.grid_sample(inputs, grid, align_corners=True))
-            .squeeze(1)
-            .long()
-        )
+# Just find a way to augment the stuff nicely
 
 class DQN(nn.Module):
     """
@@ -78,24 +22,15 @@ class DQN(nn.Module):
 
     def __init__(self,observation,num_actions,embedding_dim=32,crop_dim=9,num_layers=5):
         super.__init__()
-        """Parameter explanation
-        observation:We will index this dictionary to extract useful information
-        num_actions: How many actions are we allowed to take
-        embedding_size: Size of the embedding
-        crop_dim: dimensions around that we crop around the agent
-        num_layers: number of layers the agent will have
-
-        """
 
         self.map_size = observation['glyph'].shape
         self.blstats_size = observation['blstats'].shape[0]
         # glpyhs, colors and chars all have the same size...
-        # Will now only need to look into how/if messages are handled
         self.num_actions num_actions
         self.H = self.map_size[0]
         self.W = self.map_size[1]
 
-        self.embed_dim = embedding_dim
+        self.embed_dim = embedding_dim # Check if we are working with embedding
         self.h_size = 512 # This is the width of the network (number of nodes in each layer)
 
 
@@ -120,14 +55,13 @@ class DQN(nn.Module):
         Y = 8  # number of output filters
         L = num_layers  # number of convnet layers
 
-        in_channels = [K] + [M] * (L - 1) # How and why?
-        out_channels = [M] * (L - 1) + [Y] # How and why?
+        in_channels = [K] + [M] * (L - 1)  # [K, M,M,M,M,M,M for L-1 times]--> Handle this better
+        out_channels = [M] * (L - 1) + [Y]
 
-        def interleave(xs,ys): #????
+        def interleave(xs,ys): #???? What is going on here
             return [val for pair in zip(xs, ys) for val in pair]
 
         # We now define the structure of the network ( which one - there are many networks that we are dealing with)
-        # For below, how and why are they indexing a scalar? in_channels is defined above as a scalar?
         conv_extract = [
             nn.Conv2d(
                 in_channels=in_channels[i],
@@ -143,10 +77,8 @@ class DQN(nn.Module):
             *interleave(conv_extract, [nn.ELU()] * len(conv_extract))
         )
 
-        # nn.ELU applies the elementwise function:
-        # ELU(x) = max(0,x) + min(0, alpha *(exp(x)-1))--> Why is this necessary?
-
         # CNN crop model. --> Structure is identical to the previously defined model
+        # This is the network that deals with the world
         conv_extract_crop = [
             nn.Conv2d(
                 in_channels=in_channels[i],
@@ -162,10 +94,11 @@ class DQN(nn.Module):
         # This interleave function seems to be extremely important
         self.extract_crop_representation = nn.Sequential(
             *interleave(conv_extract_crop, [nn.ELU()] * len(conv_extract))
-        )
+        ) # Unpacks the values (removes the commas and the square brackets)
 
+
+        # WE DONT NEED THIS BUT REGARDLESS, SHOULD UNDERSTAND WHAT ARE THEY TRYING TO DO
         out_dim = self.k_dim
-        # Finally some resemblence!!!
         # CNN over full glyph map
         out_dim += self.H * self.W * Y
 
@@ -173,7 +106,6 @@ class DQN(nn.Module):
         out_dim += self.crop_dim ** 2 * Y
 
         # Network to embed the blstats... what exactly does this mean?
-
         self.embed_blstats = nn.Sequential(
             nn.Linear(self.blstats_size, self.k_dim),
             nn.ReLU(),
@@ -189,30 +121,6 @@ class DQN(nn.Module):
             nn.ReLU(),
         )
 
-        """
-        if self.use_lstm:
-            self.core = nn.LSTM(self.h_dim, self.h_dim, num_layers=1)
-        """
-
-        # They are using a policy gradient method!
-        """
-        self.policy = nn.Linear(self.h_dim, self.num_actions)
-        self.baseline = nn.Linear(self.h_dim, 1)
-        """
-
-    def initial_state(self, batch_size=1):
-        if not self.use_lstm:
-            return tuple() # Empty!
-        return tuple(
-            torch.zeros(self.core.num_layers, batch_size, self.core.hidden_size)
-            for _ in range(2)
-        )
-
-    def _select(self, embed, x): # What is this!
-        # Work around slow backward pass of nn.Embedding, see
-        # https://github.com/pytorch/pytorch/issues/24912
-        out = embed.weight.index_select(0, x.reshape(-1))
-        return out.reshape(x.shape + (-1,))
 
     def forward(self, env_outputs, core_state):
         # Time seems to be an important aspect (not sure if this is solely related to the LSTM?)
@@ -287,46 +195,7 @@ class DQN(nn.Module):
 
         # -- [B x K]
         st = self.fc(st)# --> Check if we will be needing the fc
-        """
 
-        if self.use_lstm:
-            core_input = st.view(T, B, -1)
-            core_output_list = []
-            notdone = (~env_outputs["done"]).float()
-            for input, nd in zip(core_input.unbind(), notdone.unbind()):
-                # Reset core state to zero whenever an episode ended.
-                # Make `done` broadcastable with (num_layers, B, hidden_size)
-                # states:
-                nd = nd.view(1, -1, 1)
-                core_state = tuple(nd * s for s in core_state)
-                output, core_state = self.core(input.unsqueeze(0), core_state)
-                core_output_list.append(output)
-            core_output = torch.flatten(torch.cat(core_output_list), 0, 1)
-        else:
-            core_output = st
-        """
-        # Looking at the context below, I reckon that core_output should be the "ultimate" input to *our* model
-
-        # -- [B x A]
-        policy_logits = self.policy(core_output)
-        # -- [B x A]
-        baseline = self.baseline(core_output)
-
-
-        if self.training:
-            action = torch.multinomial(F.softmax(policy_logits, dim=1), num_samples=1)
-        else:
-            # Don't sample when testing.
-            action = torch.argmax(policy_logits, dim=1)
-
-        policy_logits = policy_logits.view(T, B, self.num_actions)
-        baseline = baseline.view(T, B)
-        action = action.view(T, B)
-
-        return (
-            dict(policy_logits=policy_logits, baseline=baseline, action=action),
-            core_state,
-        )
         """
 
 

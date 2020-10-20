@@ -6,32 +6,11 @@ from MyAgent import MyAgent, DQN
 import torch
 
 # Eventually, look into clipping the rewards (The justifacation being stated in the DeepMind DQN paper)
-# There appraoch is working with rollouts... Rather focus on the framing aspect as opposed to the solution itself
-# use their Resetting environment to be trained indefinitely... Otherwise, it will terminate after every episode
-# It doesnt look like format_observations is doing the actual formatting (seems kinda useless)...
-    # seems to just take the observation, transform to tensor and reshape...
-    #It then returns the formatted obs. as a dictionary again
-# update function is not implemented... Whatever calls it is a dictionary and it just adds the parameters to the the dictionary
-# In line 350, its seems that _format_observations just creates the space and sorts of the obs. keys (glyphs, blstats)...
-# Thereafter, we take this lamely formatted observation (dict) and adds the additional stuff to the observation from line 351
-# The abovementioned is definitely the approach taken to build on the default state variables
-
-#hey keep track of the provided state variables plus the following:
-"""
-result.update(
-            reward=reward,
-            done=done,
-            episode_return=episode_return,
-            episode_step=episode_step,
-            last_action=action,
-        )
-"""# Look into where is this used
-# They overwrite the step function
-# Rnadom net is useless, NetHackNet is where the action is. Thats where we do the cropping and fancy stuff
-# Through a parameter to NetHackNet, we can specify the embedding dimension. That's the thing that we are trying to learn
+# use their Resetting environment to be trained indefinitely... Otherwise, it will terminate after every episode... Avoid the need to set a max_episode length (which makes sense)
+# glyphs, colors, char, stats, rewards, done,
 
 
-def _format_observations(observation, keys=("glyphs", "blstats")):
+def _format_observations(observation, keys=("glyphs", "blstats")): # Keep and adapt to our needs
     observations = {}
     for key in keys:
         entry = observation[key]
