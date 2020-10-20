@@ -1,20 +1,21 @@
 import numpy as np
 
 class node:
-    def __init__(self, s, a=None, p=None):
-        self.action = a
+    def __init__(self, s, a=[], p=None):
+        self.actions = a
         self.state = s
         self.visits = 0
         self.reward = 0
         self.parent = p
         self.isTerminal = False
-        self.children = []
+        self.children = [] # all children of current node
 
     def backup(self, delta):
-        self.visits += 1
-        self.reward += delta
-        if self.parent != None:
-            self.parent.backup(delta)
+        current = self
+        while current != None:
+            self.visits += 1
+            self.reward += delta
+            current = current.parent
 
     def addChild(self,child):
         child.parent = self

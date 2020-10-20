@@ -1,7 +1,8 @@
 from AbstractAgent import AbstractAgent
 from Node import node
 import numpy as np
-from copy import copy
+from copy import deepcopy
+from tqdm import tqdm
 
 class MyAgent(AbstractAgent):
     def __init__(self, observation_space, action_space,seed,env):
@@ -10,6 +11,7 @@ class MyAgent(AbstractAgent):
         self.env = env
         self.seed = seed
         self.tree = None
+        self.current = None
         # TODO Initialise your agent's models
 
         # for example, if your agent had a Pytorch model it must be load here
@@ -23,37 +25,54 @@ class MyAgent(AbstractAgent):
     
     def reset(self):
         self.env.reset()
-        self.env.seed
+        self.env.seed(self.seed, self.seed)
 
     def UCTS(self, state, num_episodes=100):
-        root = node(state)
         if (self.tree==None):
+            # The first run will enter here
+            root = node(state)
             self.tree = root
+            self.current = self.tree
         else:
-            root = self.tree.getChild(state)
-        for _ in range(num_episodes):
-            self.treePolicy(root)
-            # self.env.reset()
-            # self.env.seed(self.seed,self.seed)
-        return root.bestChild(0).action
+            self.current = self.current.getChild(state)
+        for _ in tqdm(range(num_episodes)): 
+            self.treePolicy(self.current)
+            self.StepEnvironment(self.current.actions)
+        print(self.current.bestChild(0).actions[-1])
+        return self.current.bestChild(0).actions[-1]
 
     def defaultPolicy(self, n):
-        temp_env = copy(self.env)
-        _, reward, done, _ = temp_env.step(n.action)
+        total = self.StepEnvironment(n.actions)
+        done = False
         while not done:
             action = np.random.choice(self.action_space.n)
-            _, reward, done, _ = temp_env.step(action)
+            _, reward, done, _ = self.env.step(action)
+            total += reward
         return reward
-
+    
+    '''Takes in an action list and loops through those'''
+    def StepEnvironment(self, action_list):
+        self.reset()
+        total = 0
+        for i in action_list:
+            state,reward,done,_ = self.env.step(i)
+            total += reward
+        return total
+        
     def expand(self,n):
-        actions = [n.children[i].action for i in range(len(n.children))] #actions that have been played
+        actions = [n.children[i].actions[-1] for i in range(len(n.children))] #actions that have been played
         allActions = self.FisherYatesShuffle(np.arange(self.action_space.n)) #ensures random all action
         newNode = None
+        temp = n.actions
+        #create new env
+        # # iterate through current list of actions
         for i in allActions:
             if i not in actions:
-                temp_env = copy(self.env)
-                new_state, _, done, _= temp_env.step(i)#self.env.step(i)
-                newNode = node(new_state,i)
+                self.StepEnvironment(n.actions)
+                new_state, _, done, _= self.env.step(i)
+                temp.append(i)
+                newNode = node(new_state,deepcopy(temp))
+                temp.pop()
                 n.addChild(newNode)
                 newNode.isTerminal = done
 
