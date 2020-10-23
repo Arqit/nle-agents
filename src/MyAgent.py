@@ -1,8 +1,8 @@
-from AbstractAgent import AbstractAgent
+#from AbstractAgent import AbstractAgent
 from gym import spaces
 from replay_buffer import ReplayBuffer
-import torch.nn as nn
 import torch
+import torch.nn as nn
 import numpy as np
 from torchsummary import summary
 
@@ -48,6 +48,7 @@ class DQN(nn.Module):
 
 
     def forward(self, x):
+        #print(x.size())
         conv_out = self.conv(x).view(x.size()[0], -1)
         return self.fc(conv_out)
 
