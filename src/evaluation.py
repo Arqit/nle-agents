@@ -11,7 +11,7 @@ from torchsummary import summary
 np.set_printoptions(threshold=np.inf,linewidth=100000)
 # We're going to have to use other things as input as well because our "local view" around the agent is usually small and typically, neural networks would need larger inputs than that to be useful
 # Find a way to get it to work on colab to save time and sanity!
-# We still have to food we choose to eat? I saw that there's still a message: What do you want to eat? [fghi or ?*]
+# We still have to choose what food to eat? I saw that there's still a message: What do you want to eat? [fghi or ?*]
 # All cases need to be handled properly... It gets stuck if it chooses to eat but doesnt select proper food
 # For some reason, the network is producing the same answer (kinda makes sense because if the network is produced with the same input, it will produce the same answer)... Obviously, if the action taken is futile, we get the same state
 
