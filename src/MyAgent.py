@@ -95,12 +95,13 @@ class DQN(nn.Module):
         if conv_parameters == None:
             input_shape = observation_space.shape
             self.conv = nn.Sequential(
-            nn.Conv2d(input_shape[0], 32, kernel_size=8, stride=4),
+            nn.Conv2d(input_shape[0], 64, kernel_size=4, stride=2),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            nn.Conv2d(64, 128, kernel_size=2, stride=2),
             nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            nn.Conv2d(128, 256, kernel_size=2, stride=2),
             nn.ReLU())
+            
 
 
             #print(self.conv)
@@ -124,7 +125,7 @@ class DQN(nn.Module):
             for i in conv_parameters:
                 #make the conv network
                 conv_arr.append(('conv{}'.format(i),nn.Conv2d(i[0],i[1],i[2],i[3])))
-                conv_arr.append(('relu{}'.format(conkernel_sizev_counter),nn.ReLU()))
+                conv_arr.append(('relu{}'.format(conv_counter),nn.ReLU()))
                 conv_counter += 1
 
 
@@ -215,7 +216,7 @@ class MyAgent:
 
 
 
-        self.Q = DQN(self.observation_space,self.action_space,conv_params,linear_params)
+        self.Q = DQN(self.observation_space,self.action_space)
         self.Q.cuda()
         summary(self.Q,(3,79,79))
         self.Q_hat = DQN(self.observation_space, self.action_space)
@@ -243,9 +244,13 @@ class MyAgent:
         Q_primes = self.Q_hat(next_states).max(1)[0]
         Q_primes[done] = 0.0
         Q_primes = Q_primes.detach()
-        predicted_Q_values = Q_primes * self.gamma + rewards
+        predicted_Q_values = Q_primes * self.gamma + rewards # This is great! There is atleast some resemblance of the PER article
 
         loss_t = nn.MSELoss()(actual_Q, predicted_Q_values)
+        # We take the absolute value of loss_t as the TD-error used for assigning our priorities
+        # If we keep the TD_error in the tuple of the samples, we should only update the samples in consideration when we update the neural network, not all the samples!
+        #May have to sort the samples in the experience replay buffer according to their "priority"...
+        # The TD error is not the pririty and just be aware that we need a probability distribution for sampling... Theres a special way of getting priorties 
         self.optimizer.zero_grad()
         loss_t.backward()
         self.optimizer.step()
@@ -275,4 +280,7 @@ class MyAgent:
         # TODO Select action greedily from the Q-network given the state
         the_state = state.type(torch.cuda.FloatTensor)
         the_answer = self.Q.forward(the_state).cpu()
-        return torch.argmax(the_answer)
+        action = torch.argmax(the_answer)
+        return action
+
+        
