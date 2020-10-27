@@ -8,14 +8,30 @@ import numpy as np
 import random
 from torchsummary import summary
 
-np.set_printoptions(threshold=np.inf,linewidth=100000)
-# We're going to have to use other things as input as well because our "local view" around the agent is usually small and typically, neural networks would need larger inputs than that to be useful
-# Find a way to get it to work on colab to save time and sanity!
-# We still have to choose what food to eat? I saw that there's still a message: What do you want to eat? [fghi or ?*]
-# All cases need to be handled properly... It gets stuck if it chooses to eat but doesnt select proper food
-# For some reason, the network is producing the same answer (kinda makes sense because if the network is produced with the same input, it will produce the same answer)... Obviously, if the action taken is futile, we get the same state
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# Main focus: Get the DQN network to behave before doing the below stuff (address all possible issues that arise)
 
-# Look into ways of sampling from the experience buffer more efficently
+# We still have to choose what food to eat? I saw that there's still a message: What do you want to eat? [fghi or ?*]
+
+# Create a macro to handlefood selection so when the eating action is selected, this macro is invoked and will do the necessary decision making
+
+# how will the network know where we are... Ignore for now and expect the best! d(._.)b
+# Find a way to get it to work on colab to save time and sanity! Fish(7), grape(4), hotdog(5), ice-cream(1)... Fig, granadilla, hot-potato, ice-ice-baby
+#if(we are posed with a question to choose food):
+# out hunger in the range (1,3): Choose 'f'
+# else if in the range (4:7): Choose 'g'.......
+# Get the noisy net to work so that we stop getting stuck when we loop from getting the same input and producing the same answer
+# Look into ways of sampling from the experience buffer more efficently! Do prioritized replay
+
+
+# My Prioritized Replay Buffer Sampling
+#In particular, we propose to more frequently replay transitions with high expected learning progress, as measured by the magnitude of their temporal-difference (TD) error. 
+#The magnitude of the TD error (squared) is what we want to minimize in the Bellman equation. Hence, pick the samples with the largest error so that our neural network can minimize it!
+# The idea is to improve on the samples that we performed badly on (as measured by the TD_Loss)
+
+np.set_printoptions(threshold=np.inf,linewidth=100000)
+# We're going to have to use other things as input as well because our "local view" around the agent is usually small and typically, neural networks would need larger inputs than that to be useful...
+
 
 def run_episode(env):
     # create instance of MyAgent
@@ -76,10 +92,8 @@ if __name__ == '__main__':
     # At the moment, specials is just a zeroes array???
     # Theres definitely a difference between glyphs and chars - glyphs is zero when undefined and contains large numbers. char is 32 where undefined and has small numbers
     # The architecture of the network will require some thought
-    # I've read through the Pong wrappers and I dont think we need any of them
     # Im starting with their naive epsilon strategy, will change later to be fancy
 
-    # I dont think the agent knows what is it's position? -> Look into how is this handled (check also how was this done for Pong)
 
     print(env.__dict__)
     test= env.reset()
@@ -87,6 +101,7 @@ if __name__ == '__main__':
     my_y = test['blstats'][1]
     env.render()
     env.seed(hyper_params["seed"])
+
     # Remember that the size of the world is 21 x79
     #print(type(test["glyphs"]))
     #print(test["glyphs"])
@@ -138,11 +153,23 @@ if __name__ == '__main__':
         output = Crop(state,padded_world,hyper_params["crop_dim"])
         padded_world = torch.tensor(padded_world)
 
-        if state["blstats"][10]/state["blstats"][11] > 0.7: # Experiment with this parameter... I currently have it where epsilon is dependent on the health status (HP= HitPoints)
+        if random.random()<0.8: # Experiment with this parameter... I currently have it where epsilon is dependent on the health status (HP= HitPoints)
             action = np.random.choice(agent.action_space.n)
         else:
             action = agent.act(torch.unsqueeze(padded_world,0)).item()
-            print(action)
+        if action == 21:
+            state_prime, reward, done, _ = env.step(action) 
+            the_message = [chr(a) for a in state_prime["message"]]
+            the_message = ''.join(the_message)
+            print("Im here!")
+            print(the_message)
+            if 'There' in the_message:
+                action = ord('y')
+            else:
+                options = the_message[the_message.find('['):the_message.find(" ",the_message.find('['))]
+                action = ord(options[np.random.choice(len(options))])
+                print("Eating Menu"+str(action))
+
         state_prime, reward, done, _ = env.step(action)
         env.render()
         new_stacked_version = torch.cat((torch.cat((torch.unsqueeze(torch.from_numpy(state_prime['glyphs']),0),torch.unsqueeze(torch.from_numpy(state_prime['colors']),0))),torch.unsqueeze(torch.from_numpy(state_prime['chars']),0)))
@@ -157,6 +184,7 @@ if __name__ == '__main__':
             episode_rewards.append(total_reward)
             total_reward = 0
             env.reset()
+
         if (
                 t > hyper_params["learning-starts"]
                 and t % hyper_params["learning-freq"] == 0
