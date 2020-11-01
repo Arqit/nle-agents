@@ -11,8 +11,8 @@ from numpyencoder import NumpyEncoder
 def run_episode(env, seed, agent):
     done = False
     episode_return = 0.0
-    state = env.reset()
     env.seed(seed,seed)
+    state = env.reset()
     count = 0
     while not done:
         # pass state to agent and let agent decide action
@@ -24,7 +24,7 @@ def run_episode(env, seed, agent):
         env.render()
         #wandb.log({"Epsiode-Return": episode_return, "Seed" : seed})
         count+=1
-        if count > 0:
+        if count > 5:
             done = True
         print(action)
     return episode_return
@@ -40,10 +40,10 @@ num_runs = 1#0
 rewards = []
 for seed in seeds:
     seed_rewards = []
-    agent = MyAgent(env.observation_space, env.action_space,seed,env)
+    agent = MyAgent(env.observation_space, env.action_space,seed)
     for i in range(num_runs):
         seed_rewards.append(run_episode(env, seed,agent))
-    agent.save()
+    #agent.save()
     rewards.append(np.mean(seed_rewards))
 
 # Close environment and print average reward
