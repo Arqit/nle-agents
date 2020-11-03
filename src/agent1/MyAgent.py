@@ -1,5 +1,5 @@
 from AbstractAgent import AbstractAgent
-from Node import node, Tree
+from Node import Tree
 import numpy as np
 from copy import deepcopy
 from tqdm import tqdm
@@ -7,30 +7,23 @@ import nle
 import gym
 
 class MyAgent(AbstractAgent):
-    def __init__(self, observation_space, action_space,seed):
+    def __init__(self, observation_space, action_space,seed,depth,env_name):
+        print('ola')
         self.observation_space = observation_space
         self.action_space = action_space
-        self.env = gym.make("NetHackScore-v0")
+        self.env = gym.make(env_name)
         self.seed = seed
         self.reset()
         self.tree = None
         self.actions = []
+        self.depth = depth
         self.startingObservation = None
-        # TODO Initialise your agent's models
+        
 
-        # for example, if your agent had a Pytorch model it must be load here
-        # model.load_state_dict(torch.load( 'path_to_network_model_file', map_location=torch.device(device)))
 
-    def act(self, observation):
-        # Code for allowing for multiple runs with the same agent
-        # if self.startingObservation == None:
-        #     self.startingObservation = observation
-        # else:
-        #     if np.all(self.startingObservation == observation):
-        #         self.resetAgent()
-        #         print("Next Run")
 
-        # TODO: return selected action
+    def act(self,observation):
+
         return self.UCTS()
     
     def resetAgent(self):
@@ -39,74 +32,92 @@ class MyAgent(AbstractAgent):
         del self.tree
         self.tree = None
 
-    def DeletePrior(self):
-        stack = [self.tree.root]
-        while len(stack)>0:
-            if np.all(self.tree[stack[-1]]["actions"] == self.actions):
-                if self.tree[stack[-1]]["parent"] != None: 
-                    self.tree[self.tree[stack[-1]]["parent"]]["children"].remove(stack[-1])
-                self.tree[stack[-1]]["parent"] = None
-                self.tree.root = stack[-1]
-                stack.pop()
-            elif len(self.tree[stack[-1]]["children"]) == 0: 
-                if self.tree[stack[-1]]["parent"] != None: 
-                    self.tree[self.tree[stack[-1]]["parent"]]["children"].remove(stack[-1])        
-                del self.tree[stack[-1]]
-                stack.pop()
-            else:
-                for i in range(len(self.tree[stack[-1]]["children"])):
-                    stack.append(self.tree[stack[-1]]["children"][i])
-                    break
+    def DeletePrior(self,bc):
+        acts = self.tree[bc]['actions'] 
+        keys = list(self.tree.dictionary.keys())
+        actCount = len(acts)
+        for ind in keys :
+            if acts[:actCount] != self.tree[ind]['actions'][:actCount]: #are you the best move or it's decendant?
+                _ = self.tree.dictionary.pop(ind)
+        self.tree.root = bc
+        self.tree[bc]['parent'] = None
+
     
     def reset(self):
-        self.env.seed(self.seed, self.seed)
+ 
+        self.env.seed(self.seed)
         self.env.reset()
 
-    def UCTS(self, depth=100):
+    def UCTS(self):
         if self.tree == None:
             self.tree = Tree()
+        #give all actions taken to arrive at curren node to the current root
         self.tree[self.tree.root]["actions"] = self.actions
-        for _ in tqdm(range(depth)): 
+        for _ in (range(self.depth)): 
             v_1 = self.treePolicy(self.tree.root)
             delta = self.defaultPolicy(v_1)
             self.tree.backup(delta, v_1)
-        a = self.tree[self.tree.bestChild(self.tree.root,0)]["actions"][-1]
+        
+        best_child = self.tree.bestChild(self.tree.root,0) #select best child without using exploration ?
+        a = self.tree[best_child]["actions"][-1]
+        self.DeletePrior(best_child)
         self.actions.append(a)
-        self.DeletePrior()
         return a
 
 
 
     def defaultPolicy(self, state):
-        total = self.StepEnvironment(state)
-        done = False
+        '''This function performs a rollout down a path using
+        a random policy. The reward for the path is returned
+        so that it can be backed up. '''
+        self.StepEnvironment(self.tree[state]['parent']) 
+        _,total,_,_ = self.env.step(self.tree[state]['actions'][-1])
+        
+        done = self.tree[state]['isTerminal']
+        
+        if done:
+            return total#self.tree[state]['reward']
+
         while not done:
             action = np.random.choice(self.action_space.n)
-            _, reward, done, _ = self.env.step(action)
+            state, reward, done, _ = self.env.step(action)
             total += reward
-        return reward
+            
+        return total
     
-    '''Takes in a state and loops through the state's action list'''
+ 
     def StepEnvironment(self, state):
+        '''
+        Get the state's environment to be where you would be in the
+        environment if you followed all the steps from the root to the 
+        current node
+        '''
+#         print('\nstep',state)
         self.reset()
-        total = 0
         action_list = self.tree[state]["actions"]
         for i in action_list:
             state,reward,_,_ = self.env.step(i)
-            total += reward
-        return total
+
+            
         
     def expand(self,state):
+        '''
+            Adds a single child to state. The child is
+            the state that is reached when taking an action a' from
+            state where a' is an action that has not already been
+            played. 
+        '''
         actions = [self.tree[self.tree[state]["children"][i]]["actions"][-1] for i in range(len(self.tree[state]["children"]))] #actions that have been played
         allActions = self.FisherYatesShuffle(np.arange(self.action_space.n)) #ensures random all action
         temp = deepcopy(self.tree[state]["actions"])
-        # # iterate through current list of actions
+        # iterate through current list of actions and expand an unvisited one
         for i in allActions:
             if i not in actions:
                 self.StepEnvironment(state)
-                new_state, _, done, _= self.env.step(i)
+                _, reward, done, _= self.env.step(i)
                 temp.append(i)
-                child = self.tree.AddState(deepcopy(temp))
+                child = self.tree.stateCount
+                self.tree.AddState(a = deepcopy(temp)) 
                 self.tree.addChild(state,child)
                 self.tree[child]["isTerminal"] = done
                 return child
@@ -116,48 +127,18 @@ class MyAgent(AbstractAgent):
         Expands the tree until a terminal node is reached.
         """
 
-        '''
-        while computational load allows:
-            if node is leaf:
-                expand and rollout first child
-            else:
-                find best child:
-                if best child is not visited:
-                    rollout and backup reward
-                else:
-                    expand best child
-                    rollout first child
-        '''
         while self.tree[state]["isTerminal"] == False:
+            
             if len(self.tree[state]["children"]) < self.action_space.n:
+                #expansion phase
                 return self.expand(state)
             else:
-                state = self.tree.bestChild(state, 1)
-        return state
-        # if len(self.tree[state]["children"])==0: #first check if it's a leaf node
-        #     self.expand(state)
-        #     for i in range(len(self.tree[state]["children"])):
-        #         #TODO if all the children have been visited then we should
-        #         #choose which one to rollout based on the best child
-        #         if self.tree[self.tree[state]["children"][i]]["visits"] == 0 and not self.tree[self.tree[state]["children"][i]]["isTerminal"]:
-        #             reward = self.defaultPolicy(self.tree[state]["children"][i]) #rollout
-        #             self.tree.backup(reward,self.tree[state]["children"][i])
-        #             return reward
-        # else:
-        #     new_state = self.tree.bestChild(state,1)
-        #     if (self.tree[new_state]["visits"] == 0):
-        #         reward = self.defaultPolicy(new_state) #rollout
-        #         self.tree.backup(reward,new_state)
-        #     else:
+                #selection phase
                 
-        #         self.expand(new_state)
-        #         for i in range(len(self.tree[new_state]["children"])):
-        #         #TODO if all the children have been visited then we should
-        #         #choose which one to rollout based on the best child
-        #             if self.tree[self.tree[new_state]["children"][i]]["visits"] == 0 and not self.tree[self.tree[stnew_stateate]["children"][i]]["isTerminal"]:
-        #                 reward = self.defaultPolicy(self.tree[new_state]["children"][i]) #rollout
-        #                 self.tree.backup(reward,self.tree[new_state]["children"][i])
-        #                 return reward
+                state = self.tree.bestChild(state, 1)
+
+        return state
+
         
 
 
@@ -172,17 +153,6 @@ class MyAgent(AbstractAgent):
     def __del__(self):
         self.env.close()
         del self.tree
-    
-
-# def FullUCTS(self,num_episodes=100):
-#         stats = EpisodeStats(episode_lengths=np.zeros(num_episodes), episode_rewards1=np.zeros(num_episodes), episode_rewards2=np.zeros(num_episodes))
-#         state = self.game.reset()
-#         root = node(state)
-#         while state >= 0:
-#             newNode = self.UCTS(state)
-#             root.addChild(newNode)
-#             state = newNode.state
-#         return root, stats
     
 
     

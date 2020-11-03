@@ -3,7 +3,7 @@ import gym
 import nle
 import random
 from MyAgent import MyAgent
-import wandb
+# import wandb
 import json
 from numpyencoder import NumpyEncoder
 #wandb.init(project="nethack-le")
@@ -16,7 +16,7 @@ def run_episode(env, seed, agent):
     count = 0
     while not done:
         # pass state to agent and let agent decide action
-        action = agent.act(state)
+        action = agent.act(None)
         new_state, reward, done, _ = env.step(action)
         episode_return += reward
         #wandb.log({"Reward": reward, "Seed" : seed})
@@ -40,7 +40,8 @@ num_runs = 1#0
 rewards = []
 for seed in seeds:
     seed_rewards = []
-    agent = MyAgent(env.observation_space, env.action_space,seed)
+    agent =  MyAgent(env.observation_space,env.action_space,seed=seed,depth = 10,env_name='NetHackScore-v0')
+    
     for i in range(num_runs):
         seed_rewards.append(run_episode(env, seed,agent))
     #agent.save()
