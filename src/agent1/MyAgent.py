@@ -8,7 +8,6 @@ import gym
 
 class MyAgent(AbstractAgent):
     def __init__(self, observation_space, action_space,seed,depth,env_name):
-        print('ola')
         self.observation_space = observation_space
         self.action_space = action_space
         self.env = gym.make(env_name)
@@ -19,9 +18,6 @@ class MyAgent(AbstractAgent):
         self.depth = depth
         self.startingObservation = None
         
-
-
-
     def act(self,observation):
 
         return self.UCTS()
