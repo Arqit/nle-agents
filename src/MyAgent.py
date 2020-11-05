@@ -12,10 +12,10 @@ import math
 
 device = "cuda"
 
-# We'll probably take some inspiration from their train function ( in terms of the loss function used, the learning rates + other hyperparameters)
 #If we are to implement rainbow... I think that we will need some form of noisy net that can be turned on and off
 #The noisy net can be used for exploration instead of a policy such as e-greedy and is plugged as a layer directly into the network
 
+# No clue what's going on below
 class Noisy_Net(nn.Linear):
     def __init__(self, in_features, out_features, std_init=0.4):
         #As far as I can tell this works the same as a standard linear layer
@@ -72,7 +72,6 @@ class DQN(nn.Module):
     A basic implementation of a Deep Q-Network. The architecture is the same as that described in the
     Nature DQN paper.
     """
-# Just check if there's any notable difference in whether a box or nd array is used?
     def __init__(self, observation_space, action_space: spaces.Discrete, conv_parameters = None,linear_parameters=None, use_noisy = False):
         """
         Initialise the DQN
@@ -86,8 +85,6 @@ class DQN(nn.Module):
         The function also checks for the transition between the conv layers and the fc layers
         """
         super().__init__()
-        # Needs major repairing and consideration
-        # Below is basically directly copied over from our DQN agent. Will need to be adjusted since it expects input with size (4,84,84)
         self.conv = None
         self.fc = None
         input_shape = observation_space.shape
@@ -206,9 +203,9 @@ class MyAgent: # Ensure that the has the correct form when compared to our origi
         self.gamma = gamma
         self.beta = beta
         self.prior_eps = prior_eps
-        # TODO: Initialise -agent's networks-, optimiser and -replay buffer-
         #Edit this so that we can change the noisy network
 
+        # Whats happening here?
         conv_params = [[self.observation_space.shape[0],32,8,4],[32,64,4,2],[64,64,3,1]]
         #Make the first one of linear params whatever as it feeds out of the conv net
         linear_params = [[1,512],[512,self.action_space.n]]
@@ -220,6 +217,8 @@ class MyAgent: # Ensure that the has the correct form when compared to our origi
         self.Q.cuda()
         summary(self.Q,(3,79,79))
         self.Q_hat = DQN(self.observation_space, self.action_space)
+        self.Q_hat.load_state_dict(self.Q.state_dict())
+        #self.Q_hat.eval()
         self.Q_hat.cuda()
         self.optimizer = torch.optim.Adam(self.Q.parameters(), lr=self.lr)
 
@@ -239,27 +238,28 @@ class MyAgent: # Ensure that the has the correct form when compared to our origi
         weights = torch.tensor(samples[5]).type(torch.cuda.FloatTensor)
         indices = samples[6]
 
-        actual_Q = self.Q(states).gather(1, actions.unsqueeze(-1)).squeeze(-1) # Manually work through this thoroughly!
+        actual_Q = self.Q(states).gather(1, actions.unsqueeze(-1)).squeeze(-1) # This is an efficient way to get the Q values! (Look into it deeper)
         Q_primes = self.Q_hat(next_states).max(1)[0]
         Q_primes[done] = 0.0
         Q_primes = Q_primes.detach()
         predicted_Q_values = (Q_primes * self.gamma + rewards)
-        elementwise_loss = nn.MSELoss(reduction ='none')(actual_Q, predicted_Q_values)
+        elementwise_loss = nn.SmoothL1Loss(reduction ='none')(actual_Q, predicted_Q_values)
         new_loss = torch.mean(elementwise_loss*weights)
+
         self.optimizer.zero_grad()
         new_loss.backward()
         self.optimizer.step()
+
         loss_for_prior = elementwise_loss.detach().cpu().numpy()
         new_priorities = loss_for_prior + self.prior_eps
         self.replay_buffer.update_priorities(indices, new_priorities)
+
         return new_loss.item()
 
     def update_target_network(self):
         """
         Update the target Q-network by copying the weights from the current Q-network
         """
-
-        # TODO update target_network parameters with policy_network parameters
         self.Q_hat.load_state_dict(self.Q.state_dict())
 
     def save_network(self):
@@ -268,13 +268,13 @@ class MyAgent: # Ensure that the has the correct form when compared to our origi
     def load_network_weights(self):
         self.Q.load_state_dict(torch.load("The_weights.pth"))
 
-    def act(self, state: torch.Tensor):  # Correct
+    def act(self, state: torch.Tensor):
         """
         Select an action greedily from the Q-network given the state
         :param state: the current state
         :return: the action to take
         """
-        # TODO Select action greedily from the Q-network given the state
+        # Select action greedily from the Q-network given the state
         the_state = state.type(torch.cuda.FloatTensor)
         the_answer = self.Q.forward(the_state).cpu()
         action = torch.argmax(the_answer)
