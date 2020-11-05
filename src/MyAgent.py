@@ -12,8 +12,7 @@ import math
 
 device = "cuda"
 
-# We'll probably take some inspiration from their train function
-# The architecture will probably require some experimentation
+# We'll probably take some inspiration from their train function ( in terms of the loss function used, the learning rates + other hyperparameters)
 #If we are to implement rainbow... I think that we will need some form of noisy net that can be turned on and off
 #The noisy net can be used for exploration instead of a policy such as e-greedy and is plugged as a layer directly into the network
 
@@ -87,7 +86,7 @@ class DQN(nn.Module):
         The function also checks for the transition between the conv layers and the fc layers
         """
         super().__init__()
-
+        # Needs major repairing and consideration
         # Below is basically directly copied over from our DQN agent. Will need to be adjusted since it expects input with size (4,84,84)
         self.conv = None
         self.fc = None
@@ -95,15 +94,12 @@ class DQN(nn.Module):
         if conv_parameters == None:
             input_shape = observation_space.shape
             self.conv = nn.Sequential(
-            nn.Conv2d(input_shape[0], 64, kernel_size=4, stride=2),
+            nn.Conv2d(input_shape[0], 64,8, stride=4),
             nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=2, stride=2),
+            nn.Conv2d(64, 128, 4, stride=2),
             nn.ReLU(),
-            nn.Conv2d(128, 256, kernel_size=2, stride=2),
+            nn.Conv2d(128, 256, 3, stride=1),
             nn.ReLU())
-            
-
-
             #print(self.conv)
 
             conv_out_size = self._get_conv_out(input_shape)
@@ -179,7 +175,7 @@ class DQN(nn.Module):
 
 
 
-class MyAgent:
+class MyAgent: # Ensure that the has the correct form when compared to our original Pong DQN implementation
     def __init__(
         self,
         observation_space: spaces.Box,
@@ -189,6 +185,8 @@ class MyAgent:
         lr,
         batch_size,
         gamma,
+        beta,
+        prior_eps
     ):
         """
         Initialise the DQN algorithm using the Adam optimiser
@@ -201,11 +199,13 @@ class MyAgent:
         """
         self.observation_space = observation_space
         self.action_space = action_space
-        self.replay_buffer = replay_buffer #maybe the wrong replay buffer is being used
+        self.replay_buffer = replay_buffer
         self.use_double_dqn = use_double_dqn
         self.lr = lr
         self.batch_size = batch_size
         self.gamma = gamma
+        self.beta = beta
+        self.prior_eps = prior_eps
         # TODO: Initialise -agent's networks-, optimiser and -replay buffer-
         #Edit this so that we can change the noisy network
 
@@ -228,34 +228,31 @@ class MyAgent:
         Optimise the TD-error over a single minibatch of transitions
         :return: the loss
         """
-        # TODO
-        #   Optimise the TD-error over a single minibatch of transitions
-        #   Sample the minibatch from the replay-memory
-        #   using done (as a float) instead of if statement
-        #   return loss
-        samples = self.replay_buffer.sample(self.batch_size)
+        samples = self.replay_buffer.sample(self.beta)
         states = torch.tensor(samples[0]).type(torch.cuda.FloatTensor)
-        next_states = torch.tensor(samples[3]).type(torch.cuda.FloatTensor)
         actions = torch.tensor(samples[1]).type(torch.cuda.LongTensor)
         rewards = torch.tensor(samples[2]).type(torch.cuda.FloatTensor)
+        next_states = torch.tensor(samples[3]).type(torch.cuda.FloatTensor)
         done = torch.tensor(samples[4]).type(torch.cuda.LongTensor)
 
-        actual_Q = self.Q(states).gather(1, actions.unsqueeze(-1)).squeeze(-1)# This is correct!!! You can google this if you want... the gather is needed so that we can index the self.Q(state_V) using a tensor
+
+        weights = torch.tensor(samples[5]).type(torch.cuda.FloatTensor)
+        indices = samples[6]
+
+        actual_Q = self.Q(states).gather(1, actions.unsqueeze(-1)).squeeze(-1) # Manually work through this thoroughly!
         Q_primes = self.Q_hat(next_states).max(1)[0]
         Q_primes[done] = 0.0
         Q_primes = Q_primes.detach()
-        predicted_Q_values = Q_primes * self.gamma + rewards # This is great! There is atleast some resemblance of the PER article
-
-        loss_t = nn.MSELoss()(actual_Q, predicted_Q_values)
-        # We take the absolute value of loss_t as the TD-error used for assigning our priorities
-        # If we keep the TD_error in the tuple of the samples, we should only update the samples in consideration when we update the neural network, not all the samples!
-        #May have to sort the samples in the experience replay buffer according to their "priority"...
-        # The TD error is not the pririty and just be aware that we need a probability distribution for sampling... Theres a special way of getting priorties 
+        predicted_Q_values = (Q_primes * self.gamma + rewards)
+        elementwise_loss = nn.MSELoss(reduction ='none')(actual_Q, predicted_Q_values)
+        new_loss = torch.mean(elementwise_loss*weights)
         self.optimizer.zero_grad()
-        loss_t.backward()
+        new_loss.backward()
         self.optimizer.step()
-
-        return loss_t.item()
+        loss_for_prior = elementwise_loss.detach().cpu().numpy()
+        new_priorities = loss_for_prior + self.prior_eps
+        self.replay_buffer.update_priorities(indices, new_priorities)
+        return new_loss.item()
 
     def update_target_network(self):
         """
@@ -282,5 +279,3 @@ class MyAgent:
         the_answer = self.Q.forward(the_state).cpu()
         action = torch.argmax(the_answer)
         return action
-
-        
