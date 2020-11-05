@@ -20,9 +20,10 @@ class MyAgent(AbstractAgent):
         #self.depth = depth
         self.startingObservation = None
         self.pCount = os.cpu_count()
-        runsPerActions = np.ceil(action_space.n/self.pCount)
+        #runsPerActions = np.ceil(action_space.n/self.pCount)
         #stepsPerDepth = np.ceil(depth/action_space.n)
-        self.steps = int(steps*runsPerActions)
+        #self.steps = int(steps*runsPerActions)
+        self.steps = steps
         
     def act(self,observation):
 
@@ -129,8 +130,8 @@ class MyAgent(AbstractAgent):
                 self.tree.addChild(state,child)
                 self.tree[child]["isTerminal"] = done
                 children.append(child)
-                if len(children) == self.pCount:
-                    return children
+                #if len(children) == self.pCount:
+                #    return children
         return children
 
     def treePolicy(self,state): #nxa
