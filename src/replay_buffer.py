@@ -2,13 +2,7 @@ import numpy as np
 from segment_tree import MinSegmentTree, SumSegmentTree
 import random
 
-# Conceptually, their vanilla Replay buffer is like ours!
-# Changes ours to theirs but spice it up!
-# Looks right, will just need to go through it and make sure it works as expected (and that I didnt break anything else)
-# I can improve on previous by implicitly setting the batch size instead of always calling it when I sample
-# We define importance in terms of the magnitude of the TD-error which indicates how ‘surprising’ or unexpected the transition is. (We replay the transition with the highest TD-error)
-# With regard to the above, we perform a Q-learning update to this transition which updates the weights in proportion to the TD error. One thing to note that new transitions arrive without a known TD-error, so it puts them at maximal priority in order to guarantee that all experience is seen at least once.
-# # alpha controls the amount of prioritization is applied
+# alpha controls the amount of prioritization is applied
 
 class ReplayBuffer:  # This is all working properly!
     """
@@ -56,8 +50,7 @@ class ReplayBuffer:  # This is all working properly!
         indices = np.random.randint(0, len(self._storage) - 1, size=self.batch_size)
         return self._encode_sample(indices)
 
-#
-# # They are not even using the batch_size that's being passed
+# They are not even using the batch_size that's being passed
 class PrioritizedReplayBuffer(ReplayBuffer): # I should change my above implementation
     def __init__(self,size, batch_size,alpha = 0.2):
         assert alpha >=0
@@ -120,7 +113,7 @@ class PrioritizedReplayBuffer(ReplayBuffer): # I should change my above implemen
 
         for idx,priority in zip(indices, priorities):
             assert priority >0
-            assert 0<= idx<len(self) # What is len(self)?
+            assert 0<= idx<len(self)
 
             self.sum_tree[idx] = priority ** self.alpha
             self.min_tree[idx] = priority ** self.alpha
