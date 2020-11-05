@@ -7,36 +7,12 @@ import torch
 import numpy as np
 import random
 from torchsummary import summary
-from nle.env.tasks import NetHackScore
 
-# You swap positions when your pet when it comes in your path when you are trying to move
+
 device = torch.device(('cuda:0' if torch.cuda.is_available() else 'cpu'))
 
-# PER seems to be working, now just need to find some form of evaluation method (which will help to tune the hyperparameters for PER)
-
-#Today Todo
-# 0 is giving the "Unknown ^M command" error
-# Try to get on Colab!
-# Look into proper DQN implementation to get an effective architecture (Others dont seem to be as fancy with the kernel_size and stride... In our case, I dont think it is necessary)
-
-
-# eventually, double check with our original DQN implementation to ensure that nothing has bein left out?
-# Coincide with Curt-Park
-# Main focus: Get the DQN network to behave before doing the below stuff (address all possible issues that arise)
-# We still have to choose what food to eat? I saw that there's still a message: What do you want to eat? [fghi or ?*]
-
 # how will the network know where we are... Ignore for now and expect the best! d(._.)b
-
 # Get the noisy net to work so that we stop getting stuck when we loop from getting the same input and producing the same answer
-
-# My Prioritized Replay Buffer Sampling # Read the other PER notes in MyAgent.py
-# I increased the replay buffer size from 10000 to 1000000... That is what the article states!
-# In particular, we propose to more frequently replay transitions with high expected learning progress, as measured by the magnitude of their temporal-difference (TD) error.
-# The magnitude of the TD error (squared) is what we want to minimize in the Bellman equation. Hence, pick the samples with the largest error so that our neural network can minimize it!
-# The idea is to improve on the samples that we performed badly on (as measured by the TD_Loss)
-# The goalof PER is to target the weaknesses to improve on them in the long run... This is conflicting! Investigate!!
-
-# Local view of the world is lame since neural networks are much more powerful than this!
 
 np.set_printoptions(threshold=np.inf, linewidth=100000)
 
@@ -93,6 +69,9 @@ if __name__ == '__main__':
         'eps-fraction': 0.6,  # fraction of num-steps
         'print-freq': 10,
         'crop_dim': 5,
+        'alpha': 0.2,
+        'beta': 0.6,
+        'prior_eps': 1e-6
         }
 
     # LOOK INTO WHAT SPECIALS ARE?
@@ -102,15 +81,6 @@ if __name__ == '__main__':
 
     env = gym.make("NetHackScore-v0") # If its automatically picking up gold, then autopickup must be enabled for everything
 
-    # The world is zeros everywhere and is only populated where our world actually is
-    # We can swap positions with our cat (check how is this done!)
-    # From empirical evidence, the reward function varies dramatically, its typically between 0 and -0.01( which is used as a penalty)
-    # For positive rewards, it ranges from 2 to 20, so its not a good idea to clip the rewards(I think it should be sensible to maintain that variability)
-    # At the moment, specials is just a zeroes array???
-    # Theres definitely a difference between glyphs and chars - glyphs is zero when undefined and contains large numbers. char is 32 where undefined and has small numbers
-    # Confirm that the Noisy Layer will replace the current epsilon-greedy strategy
-
-    # Remember that the size of the world is 21 x79
 
     print(env.__dict__)
     test = env.reset()
@@ -118,26 +88,16 @@ if __name__ == '__main__':
     my_y = test['blstats'][1]
     env.seed(hyper_params['seed'])
 
-    # print(type(test["glyphs"]))
-    # print(test["glyphs"])
-    # print(test['chars'])
 
     # // This block of code is pretty unnecessary at the moment, I just have it here for debugginf purposes... It's used properly in the for-loop below
     # Below stacks the glyph, colors and chars to form a map... will have the depth channel first
-
     stacked_version = torch.cat((torch.cat((torch.unsqueeze(torch.from_numpy(test['glyphs']), 0),
                    torch.unsqueeze(torch.from_numpy(test['colors']), 0))),
                    torch.unsqueeze(torch.from_numpy(test['chars']), 0)))
 
-    # print(stacked_version.shape)
-    # appropriate placeholder (0 for example in the case of glyphs, 32 in chars, etc)
-    # For whatever it's worth, I'm creating a padded version of the world to size 79x79 incase we decide to also pass the whole world as input
 
-    #padded_world = np.zeros((3, 79, 79))
-    #padded_world[:, 29:50, :] = stacked_version
-    #output = Crop(test, padded_world, hyper_params['crop_dim'])  # One thing that is quite important and you could look into is, if our agent is close to a corner, the cropping function wont return the correct size... To fix this issue, we can pad each "slice of the map" with the
 
-    replay_buffer = PrioritizedReplayBuffer(hyper_params['replay-buffer-size'],batch_size= hyper_params['replay-batch-size'],alpha = 0.2)
+    replay_buffer = PrioritizedReplayBuffer(hyper_params['replay-buffer-size'],batch_size= hyper_params['replay-batch-size'],alpha = hyper_params['alpha'])
     agent = MyAgent(
         np.zeros((3, 79, 79)), # assuming that we are taking the world as input
         env.action_space,
@@ -146,9 +106,9 @@ if __name__ == '__main__':
         hyper_params['learning-rate'],
         hyper_params['batch-size'],
         hyper_params['discount-factor'],
-        0.6,
-        1e-6
-        ) # check if beta and prior_eps gets added in here
+        hyper_params['beta'],
+        hyper_params['prior_eps']
+        )
 
     episode_rewards = []
     total_reward = 0
