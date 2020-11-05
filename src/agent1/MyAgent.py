@@ -83,6 +83,9 @@ class MyAgent(AbstractAgent):
         _,total,_,_ = self.env.step(self.tree[state]['actions'][-1])
         done = self.tree[state]['isTerminal']
 
+        if done:
+            return total#self.tree[state]['reward']
+
         while not done:
             action = np.random.choice(self.action_space.n)
             state, reward, done, _ = self.env.step(action)
