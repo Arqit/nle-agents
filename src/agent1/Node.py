@@ -40,15 +40,6 @@ class Tree:
         if self[child]["parent"] == None: #check that ch
             self[child]["parent"] = parent
             self[parent]["children"].append(child)
-
-    def getChild(self,current,state): #use actions
-        for key in state.keys():
-            if (type(state[key])==np.ndarray):
-                state[key] = state[key].tolist()
-        for i in range(len(self[current]["children"])):
-            if np.all(self[self[current]["children"][i]]["state"] == state):
-                return self[current]["children"][i]
-        return None
     
     def bestChild(self,current,c): #UCB
         

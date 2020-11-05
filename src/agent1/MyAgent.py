@@ -32,7 +32,7 @@ class MyAgent(AbstractAgent):
         acts = self.tree[bc]['actions'] 
         keys = list(self.tree.dictionary.keys())
         actCount = len(acts)
-        for ind in keys :
+        for ind in keys:
             if acts[:actCount] != self.tree[ind]['actions'][:actCount]: #are you the best move or it's decendant?
                 _ = self.tree.dictionary.pop(ind)
         self.tree.root = bc
@@ -40,7 +40,6 @@ class MyAgent(AbstractAgent):
 
     
     def reset(self):
- 
         self.env.seed(self.seed)
         self.env.reset()
 
@@ -49,7 +48,7 @@ class MyAgent(AbstractAgent):
             self.tree = Tree()
         #give all actions taken to arrive at curren node to the current root
         self.tree[self.tree.root]["actions"] = self.actions
-        for _ in (range(self.depth)): 
+        for _ in tqdm(range(self.depth)): 
             v_1 = self.treePolicy(self.tree.root)
             delta = self.defaultPolicy(v_1)
             self.tree.backup(delta, v_1)

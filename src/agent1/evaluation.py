@@ -26,7 +26,7 @@ def run_episode(env, seed, agent):
         count+=1
         if count > 5:
             done = True
-        print(action)
+        print(action, episode_return)
     return episode_return
 
 seeds = [1]#,2,3,4,5]
@@ -40,13 +40,13 @@ num_runs = 1#0
 rewards = []
 for seed in seeds:
     seed_rewards = []
-    agent =  MyAgent(env.observation_space,env.action_space,seed=seed,depth = 10,env_name='NetHackScore-v0')
+    agent =  MyAgent(env.observation_space,env.action_space,seed=seed,depth = 100,env_name='NetHackScore-v0')
     
     for i in range(num_runs):
         seed_rewards.append(run_episode(env, seed,agent))
     #agent.save()
     rewards.append(np.mean(seed_rewards))
-
+    del agent
 # Close environment and print average reward
 env.close()
 print("Average Reward: %f" %(np.mean(rewards)))
