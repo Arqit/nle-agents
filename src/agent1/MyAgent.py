@@ -5,9 +5,11 @@ from copy import deepcopy
 from tqdm import tqdm
 import nle
 import gym
+from multiprocessing import Process, Queue, Pool, Value
+import os
 
 class MyAgent(AbstractAgent):
-    def __init__(self, observation_space, action_space,seed,depth,env_name):
+    def __init__(self, observation_space, action_space,seed,steps,env_name):
         self.observation_space = observation_space
         self.action_space = action_space
         self.env = gym.make(env_name)
@@ -15,8 +17,12 @@ class MyAgent(AbstractAgent):
         self.reset()
         self.tree = None
         self.actions = []
-        self.depth = depth
+        #self.depth = depth
         self.startingObservation = None
+        self.pCount = os.cpu_count()
+        runsPerActions = np.ceil(action_space.n/self.pCount)
+        #stepsPerDepth = np.ceil(depth/action_space.n)
+        self.steps = int(steps*runsPerActions)
         
     def act(self,observation):
 
@@ -38,7 +44,6 @@ class MyAgent(AbstractAgent):
         self.tree.root = bc
         self.tree[bc]['parent'] = None
 
-    
     def reset(self):
         self.env.seed(self.seed)
         self.env.reset()
@@ -48,11 +53,21 @@ class MyAgent(AbstractAgent):
             self.tree = Tree()
         #give all actions taken to arrive at curren node to the current root
         self.tree[self.tree.root]["actions"] = self.actions
-        for _ in tqdm(range(self.depth)): 
+        for _ in tqdm(range(self.steps)): 
             v_1 = self.treePolicy(self.tree.root)
-            delta = self.defaultPolicy(v_1)
-            self.tree.backup(delta, v_1)
-        
+            processes = []
+            returns = Queue()
+            self.StepEnvironment(self.tree[v_1[0]]['parent']) 
+            for i in range(len(v_1)):
+                processes.append(Process(target=self.defaultPolicy, args=(v_1[i],returns, i)))
+                processes[i].start()
+            #delta = self.defaultPolicy(v_1)
+            for i in range(len(v_1)):
+                processes[i].join()
+            for i in range(len(v_1)):
+                val = returns.get()
+                self.tree.backup(val[1], v_1[val[0]])
+            returns.close()
         best_child = self.tree.bestChild(self.tree.root,0) #select best child without using exploration ?
         a = self.tree[best_child]["actions"][-1]
         self.DeletePrior(best_child)
@@ -61,24 +76,19 @@ class MyAgent(AbstractAgent):
 
 
 
-    def defaultPolicy(self, state):
+    def defaultPolicy(self, state, queue, i):
         '''This function performs a rollout down a path using
         a random policy. The reward for the path is returned
         so that it can be backed up. '''
-        self.StepEnvironment(self.tree[state]['parent']) 
         _,total,_,_ = self.env.step(self.tree[state]['actions'][-1])
-        
         done = self.tree[state]['isTerminal']
-        
-        if done:
-            return total#self.tree[state]['reward']
 
         while not done:
             action = np.random.choice(self.action_space.n)
             state, reward, done, _ = self.env.step(action)
             total += reward
             
-        return total
+        queue.put((i, total))
     
  
     def StepEnvironment(self, state):
@@ -90,10 +100,9 @@ class MyAgent(AbstractAgent):
 #         print('\nstep',state)
         self.reset()
         action_list = self.tree[state]["actions"]
+        reward = 0
         for i in action_list:
-            state,reward,_,_ = self.env.step(i)
-
-            
+            state,reward,_,_ = self.env.step(i)            
         
     def expand(self,state):
         '''
@@ -106,6 +115,7 @@ class MyAgent(AbstractAgent):
         allActions = self.FisherYatesShuffle(np.arange(self.action_space.n)) #ensures random all action
         temp = deepcopy(self.tree[state]["actions"])
         # iterate through current list of actions and expand an unvisited one
+        children = []
         for i in allActions:
             if i not in actions:
                 self.StepEnvironment(state)
@@ -115,7 +125,10 @@ class MyAgent(AbstractAgent):
                 self.tree.AddState(a = deepcopy(temp)) 
                 self.tree.addChild(state,child)
                 self.tree[child]["isTerminal"] = done
-                return child
+                children.append(child)
+                if len(children) == self.pCount:
+                    return children
+        return children
 
     def treePolicy(self,state): #nxa
         """

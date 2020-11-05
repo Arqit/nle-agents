@@ -17,6 +17,28 @@ class Tree:
         states will get over written
         '''
 
+    """ Saves to the tmp folder """
+    # def save(self, fileName="../data.json", fileName2="../states.json"):
+    #     f = open(fileName, "w+")
+    #     print(os.getcwd())
+    #     json.dump(self.dictionary, f, cls=NumpyEncoder)
+    #     print("saving nodes")
+    #     file2 = open(fileName2, "w")
+    #     json.dump(self.stateList, file2, cls=NumpyEncoder, indent=4)
+    #     print("saving")
+    #     f.close()
+    #     file2.close()
+
+    # def load(self, fileName="../data.json", fileName2="../states.json"):
+    #     file = open(fileName, "r")
+    #     file2 = open(fileName2, "r")
+    #     self.dictionary = file.read()
+    #     self.stateList = file2.read()
+    #     file.close()
+    #     file2.close()
+    #     self.root = self.AddState()
+    #     self.index = 0
+
     '''Only keep lowest actions to get to state'''
     def AddState(self, a=[], p=None): # a child node
         index = self.stateCount

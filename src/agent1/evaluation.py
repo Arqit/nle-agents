@@ -24,7 +24,7 @@ def run_episode(env, seed, agent):
         env.render()
         #wandb.log({"Epsiode-Return": episode_return, "Seed" : seed})
         count+=1
-        if count > 5:
+        if count > 100:
             done = True
         print(action, episode_return)
     return episode_return
@@ -40,7 +40,7 @@ num_runs = 1#0
 rewards = []
 for seed in seeds:
     seed_rewards = []
-    agent =  MyAgent(env.observation_space,env.action_space,seed=seed,depth = 100,env_name='NetHackScore-v0')
+    agent =  MyAgent(env.observation_space,env.action_space,seed=seed,steps = 10,env_name='NetHackScore-v0')
     
     for i in range(num_runs):
         seed_rewards.append(run_episode(env, seed,agent))
