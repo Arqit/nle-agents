@@ -19,8 +19,16 @@ class MyAgent(AbstractAgent):
         self.startingObservation = None
         
     def act(self,observation):
-
         return self.UCTS()
+
+    def load(self,directory):
+        self.tree = Tree(True)
+        reward = self.tree.load(directory)
+        self.actions = self.tree[self.tree.root]['actions']
+        return reward
+
+    def save(self, reward,directory):
+        self.tree.save(reward,directory)
     
     def resetAgent(self):
         self.reset()
@@ -31,6 +39,10 @@ class MyAgent(AbstractAgent):
     def DeletePrior(self,bc):
         acts = self.tree[bc]['actions'] 
         keys = list(self.tree.dictionary.keys())
+        if -1 in keys:
+            keys.remove(-1)
+        if -2 in keys:
+            keys.remove(-2)
         actCount = len(acts)
         for ind in keys:
             if acts[:actCount] != self.tree[ind]['actions'][:actCount]: #are you the best move or it's decendant?
@@ -91,7 +103,7 @@ class MyAgent(AbstractAgent):
         self.reset()
         action_list = self.tree[state]["actions"]
         for i in action_list:
-            state,reward,_,_ = self.env.step(i)
+            _,_,_,_ = self.env.step(i)
 
             
         
