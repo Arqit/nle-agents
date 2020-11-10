@@ -5,17 +5,39 @@ from collections import defaultdict
 import os
 
 class Tree:
-    def __init__(self):
+    def __init__(self,loading=False):
         self.dictionary = defaultdict(lambda: {})
         self.stateCount = 0
         self.root = 0
-        self.AddState()
+        if not loading:
+            self.AddState()
         
         '''
         We need the state count to add new children. We can't
         just take length of states because it gets pruned and
         states will get over written
         '''
+        """ Saves to the tmp folder """
+    def save(self, reward,directory):
+        fileName=directory+"/data.json"
+        f = open(fileName, "w+")
+        self.dictionary[-1] = self.stateCount
+        self.dictionary[-2] = reward
+        json.dump(self.dictionary, f, cls=NumpyEncoder)
+        print("saving nodes")
+        f.close()
+
+    def load(self,directory):
+        fileName=directory+"/data.json"
+        file = open(fileName, "r")
+        inDict = json.loads(file.read())
+        file.close()
+        for i,j in inDict.items():
+            self.dictionary[int(i)] = j
+        keys = np.sort(list(self.dictionary.keys()))
+        self.root = keys[2]
+        self.stateCount = self.dictionary[-1]
+        return self.dictionary[-2]
 
     '''Only keep lowest actions to get to state'''
     def AddState(self, a=[], p=None): # a child node
