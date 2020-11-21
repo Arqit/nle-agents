@@ -10,7 +10,7 @@ class MyAgent(AbstractAgent):
     def __init__(self, observation_space, action_space,seed,depth,env_name):
         self.observation_space = observation_space
         self.action_space = action_space
-        self.env = gym.make(env_name)
+        self.env = gym.make(env_name, savedir=None)
         self.seed = seed
         self.reset()
         self.tree = None
