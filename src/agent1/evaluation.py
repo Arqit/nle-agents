@@ -49,7 +49,7 @@ rewards = []
 directory = os.getcwd()
 for seed in seeds:
     seed_rewards = []
-    agent =  MyAgent(env.observation_space,env.action_space,seed=seed,depth = 100,env_name='NetHackScore-v0')
+    agent =  MyAgent(seed=seed)
     #for i in range(num_runs):
     seed_rewards.append(run_episode(env, seed,agent, directory))
     #agent.save()
