@@ -12,7 +12,7 @@ from multiprocessing import Queue, Pool
 
 def run_episode(seed, load=False):
     env = gym.make("NetHackScore-v0", savedir=None)
-    agent =  MyAgent(env.observation_space,env.action_space,seed=seed,depth = 100,env_name='NetHackScore-v0')
+    agent =  MyAgent(env.observation_space, env.action_space, seeds=env.get_seeds())
     done = False
     episode_return = 0.0
     env.seed(seed,seed)
