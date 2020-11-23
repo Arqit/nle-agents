@@ -49,7 +49,7 @@ rewards = []
 directory = os.getcwd()
 for seed in seeds:
     seed_rewards = []
-    agent =  MyAgent(seed=seed)
+    agent =  MyAgent(env.observation_space, env.action_space, seeds=env.get_seeds())
     #for i in range(num_runs):
     seed_rewards.append(run_episode(env, seed,agent, directory))
     #agent.save()

@@ -7,15 +7,15 @@ import nle
 import gym
 
 class MyAgent(AbstractAgent):
-    def __init__(self, seed):
+    def __init__(self, observation_space, action_space, **kwargs):
         self.env = gym.make('NetHackScore-v0', savedir=None)
-        self.observation_space = self.env.observation_space
-        self.action_space = self.env.action_space
-        self.seed = seed
+        self.observation_space = observation_space
+        self.action_space = action_space
+        self.seed = kwargs.get('seeds', None)[0]
         self.reset()
         self.tree = None
         self.actions = []
-        self.depth = depth
+        self.depth = 100
         self.startingObservation = None
         
     def act(self,observation):
