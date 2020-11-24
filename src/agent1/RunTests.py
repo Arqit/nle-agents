@@ -43,7 +43,7 @@ def run_episode(seed, load=False):
     env.close()
     return episode_return
 
-seeds = [np.random.randint(10000) for i in range(4)]#,2,3,4,5]
+seeds = [4703,8685,2786,8997,1240]#,2,3,4,5]
 print(seeds)
 # Initialise environment
 
