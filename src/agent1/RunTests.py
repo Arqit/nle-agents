@@ -15,7 +15,7 @@ def run_episode(seed, load=False):
     agent =  MyAgent(env.observation_space, env.action_space, seeds=env.get_seeds())
     done = False
     episode_return = 0.0
-    env.seed(seed,seed)
+    env.seed(seed,seed,False)
     env.reset()
     count = 0
     if load:

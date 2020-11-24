@@ -12,7 +12,7 @@ from numpyencoder import NumpyEncoder
 def run_episode(env, seed, agent, directory, load=True):
     done = False
     episode_return = 0.0
-    env.seed(seed,seed)
+    env.seed(seed,seed,False)
     state = env.reset()
     count = 0
     if load:

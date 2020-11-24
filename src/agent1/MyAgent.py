@@ -52,7 +52,7 @@ class MyAgent(AbstractAgent):
 
     
     def reset(self):
-        self.env.seed(self.seed)
+        self.env.seed(self.seed,self.seed,False)
         self.env.reset()
 
     def UCTS(self):
