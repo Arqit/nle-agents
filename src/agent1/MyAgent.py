@@ -7,15 +7,15 @@ import nle
 import gym
 
 class MyAgent(AbstractAgent):
-    def __init__(self, observation_space, action_space,seed,depth,env_name):
+    def __init__(self, observation_space, action_space, **kwargs):
+        self.env = gym.make('NetHackScore-v0', savedir=None)
         self.observation_space = observation_space
         self.action_space = action_space
-        self.env = gym.make(env_name)
-        self.seed = seed
+        self.seed = kwargs.get('seeds', None)[0]
         self.reset()
         self.tree = None
         self.actions = []
-        self.depth = depth
+        self.depth = 100
         self.startingObservation = None
         
     def act(self,observation):
@@ -23,12 +23,12 @@ class MyAgent(AbstractAgent):
 
     def load(self,directory):
         self.tree = Tree(True)
-        reward = self.tree.load(directory)
+        reward = self.tree.load(directory,self.seed)
         self.actions = self.tree[self.tree.root]['actions']
         return reward
 
     def save(self, reward,directory):
-        self.tree.save(reward,directory)
+        self.tree.save(reward,directory,self.seed)
     
     def resetAgent(self):
         self.reset()
@@ -52,7 +52,7 @@ class MyAgent(AbstractAgent):
 
     
     def reset(self):
-        self.env.seed(self.seed)
+        self.env.seed(self.seed,self.seed,False)
         self.env.reset()
 
     def UCTS(self):
@@ -60,7 +60,7 @@ class MyAgent(AbstractAgent):
             self.tree = Tree()
         #give all actions taken to arrive at curren node to the current root
         self.tree[self.tree.root]["actions"] = self.actions
-        for _ in tqdm(range(self.depth)): 
+        for _ in (range(self.depth)): 
             v_1 = self.treePolicy(self.tree.root)
             delta = self.defaultPolicy(v_1)
             self.tree.backup(delta, v_1)
@@ -77,11 +77,10 @@ class MyAgent(AbstractAgent):
         a random policy. The reward for the path is returned
         so that it can be backed up. '''
         self.StepEnvironment(self.tree[state]['parent']) 
-        obs,total,_,_ = self.env.step(self.tree[state]['actions'][-1])
-
+        _,total,_,_ = self.env.step(self.tree[state]['actions'][-1])
+        
         # if (np.all(np.array(obs["message"][:14]) == np.array([82, 101, 97, 108, 108, 121, 32, 97, 116, 116, 97, 99, 107]))):
         #     total -= 1000
-
         done = self.tree[state]['isTerminal']
         
         if done:
