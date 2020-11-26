@@ -83,6 +83,8 @@ class PrioritizedReplayBuffer(ReplayBuffer): # I should change my above implemen
     def _encode_sample(self, indices):
         states, actions, rewards, next_states, dones = [], [], [], [], []
         for i in indices:
+            if i> len(self):
+                i = np.random.randint(0,10000)
             data = self._storage[i]
             state, action, reward, next_state, done = data
             states.append(np.array(state, copy=False))
@@ -110,7 +112,7 @@ class PrioritizedReplayBuffer(ReplayBuffer): # I should change my above implemen
         assert len(indices) == len(priorities)
 
         for idx,priority in zip(indices, priorities):
-            assert priority >0
+            #assert priority >0
             assert 0<= idx<len(self)
 
             self.sum_tree[idx] = priority ** self.alpha
