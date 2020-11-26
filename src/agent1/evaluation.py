@@ -15,12 +15,12 @@ def run_episode(env, seed, agent, directory, load=True):
     env.seed(seed,seed,False)
     state = env.reset()
     count = 0
-    if load:
-        episode_return = agent.load(directory)
-        action_list = agent.actions
-        for i in action_list:
-            _,_,_,_ = env.step(i)
-            count+=1
+#     if load:
+#         episode_return = agent.load(directory)
+#         action_list = agent.actions
+#         for i in action_list:
+#             _,_,_,_ = env.step(i)
+#             count+=1
     while not done:
         # pass state to agent and let agent decide action
         action = agent.act(None)
