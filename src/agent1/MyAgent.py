@@ -11,7 +11,7 @@ class MyAgent(AbstractAgent):
         self.env = gym.make('NetHackScore-v0', savedir=None)
         self.observation_space = observation_space
         self.action_space = action_space
-        self.seed = kwargs.get('seeds', None)[0]
+        self.seed = kwargs.get('seeds', 100)
         self.reset()
         self.tree = None
         self.actions = []
@@ -52,7 +52,7 @@ class MyAgent(AbstractAgent):
 
     
     def reset(self):
-        self.env.seed(self.seed,self.seed,False)
+        self.env.seed(*self.seed)
         self.env.reset()
 
     def UCTS(self):
