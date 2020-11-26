@@ -90,8 +90,6 @@ class PrioritizedReplayBuffer(ReplayBuffer): # I should change my above implemen
             rewards.append(reward)
             next_states.append(np.array(next_state, copy=False))
             dones.append(done)
-
-
         return np.array(states),np.array(actions),np.array(rewards),np.array(next_states),np.array(dones)
 
 
@@ -131,7 +129,7 @@ class PrioritizedReplayBuffer(ReplayBuffer): # I should change my above implemen
             b = segment *( i+1)
             upperbound = random.uniform(a,b)
             idx = self.sum_tree.retrieve(upperbound)
-            indices.append(idx)
+            indices.append(idx%self._maxsize)
 
         return indices
 
