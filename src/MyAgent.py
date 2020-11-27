@@ -177,11 +177,11 @@ class DQN(nn.Module):
         # Set up the convolutional neural section
         self.conv = nn.Sequential(
             nn.Conv2d(input_shape[0], 128, 8, stride=4),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.ReLU(),
             nn.Conv2d(128, 256, 4, stride=2),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.ReLU(),
             nn.Conv2d(256, 512, 3, stride=1),
-            nn.LeakyReLU(0.2, inplace=True))
+            nn.ReLU())
 
         conv_out_size = self._get_conv_out(input_shape)
         self.fc = nn.Sequential(
@@ -191,8 +191,11 @@ class DQN(nn.Module):
 
         # Set up the duelling network
         self.fc_layer_initial = nn.Sequential(
-            nn.Linear(conv_out_size, 1024),
-            nn.ReLU(), )
+            nn.Linear(conv_out_size, 2048),
+            nn.ReLU(),
+            nn.Linear(2048,1024),
+            nn.ReLU()
+             )
 
         # Set up the action/advantage layer of the network
         # This has the same output dimensions ans the action space

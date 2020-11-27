@@ -23,7 +23,6 @@ def padder(observation):
 
 if __name__ == '__main__':
     hyper_params = {  # Tinker around with these
-        'seed': 42,  # which seed to use
         'replay-buffer-size': int(150000),  # replay buffer size
         'learning-rate': 1e-3,  # learning rate for Adam optimizer --> This is the default learning rate
         'discount-factor': 0.99,  # discount factor
@@ -42,10 +41,11 @@ if __name__ == '__main__':
         'prior_eps': 1e-6
     }
 
-    np.random.seed(hyper_params['seed'])
-    random.seed(hyper_params['seed'])
+    seed = np.random.randint(0,10000)
+    np.random.seed(seed)
+    random.seed(seed)
 
-    env = gym.make("NetHackScore-v0")  # If its automatically picking up gold, then autopickup must be enabled for everything
+    env = gym.make("NetHackScore-v0",savedir = None)  # If its automatically picking up gold, then autopickup must be enabled for everything
     env.seed(hyper_params['seed'])
 
     print(env.__dict__)
@@ -81,7 +81,6 @@ if __name__ == '__main__':
             action = np.random.choice(agent.action_space.n)
         else:
             action = agent.act(torch.unsqueeze(state, 0)).item()
-            print(torch.unsqueeze(state, 0).size())
 
         #if action == 21:  # The eating 'macro' which attempts to handle the food selection issue (the developers need to get their act together)
         #    action = 19  # Just get the agent to wait until we chose an action other than 'EAT'
