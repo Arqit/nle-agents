@@ -47,6 +47,7 @@ if __name__ == '__main__':
 
     env = gym.make("NetHackScore-v0",savedir = None)  # If its automatically picking up gold, then autopickup must be enabled for everything
     env.seed(seed)
+    count = 0
 
     print(env.__dict__)
     # We are used the glyphs, colors and chars stacked as input
@@ -104,7 +105,8 @@ if __name__ == '__main__':
             total_reward = 0
 
         if t%400000==0:
-            agent.save_network()
+            agent.save_network(count)
+            count+=1
 
         if t > hyper_params['learning-starts'] and t % hyper_params['learning-freq'] == 0:
             ans = agent.optimise_td_loss()
@@ -125,4 +127,4 @@ if __name__ == '__main__':
             print('mean 100 episode reward: {}'.format(mean_100ep_reward))
             print('% time spent exploring: {}'.format(eps_threshold))
             print('********************************************************')
-    agent.save_network()
+    agent.save_network(999)

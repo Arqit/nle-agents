@@ -73,9 +73,9 @@ class MyAgent(AbstractAgent):
         """
         self.Q_hat.load_state_dict(self.Q.state_dict())
 
-    def save_network(self):
+    def save_network(self,count):
         print("Model is saved")
-        torch.save(self.Q.state_dict(), "/content/drive/MyDrive/The_weights.pth")
+        torch.save(self.Q.state_dict(), "/content/drive/MyDrive/The_weights"+str(count)+".pth")
 
 
     def act(self, observation):
