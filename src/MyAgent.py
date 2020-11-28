@@ -25,7 +25,7 @@ class MyAgent(AbstractAgent):
             self.Q_hat = DQN(observation_space, action_space).to(device)
             self.Q_hat.load_state_dict(self.Q.state_dict())
             self.Q_hat.eval()
-            self.optimizer = torch.optim.Adam(self.Q.parameters(), lr=self.lr)
+            self.optimizer = torch.optim.RMSprop(self.Q.parameters(), lr=self.lr, momentum = 0.95)
 
         else:
             self.seeds = kwargs.get('seeds', None)
@@ -74,7 +74,7 @@ class MyAgent(AbstractAgent):
         self.Q_hat.load_state_dict(self.Q.state_dict())
 
     def save_network(self):
-        print("IM IN THE NETWORK")
+        print("Model is saved")
         torch.save(self.Q.state_dict(), "/content/drive/MyDrive/The_weights.pth")
 
 
@@ -177,11 +177,11 @@ class DQN(nn.Module):
         # Set up the convolutional neural section
         self.conv = nn.Sequential(
             nn.Conv2d(input_shape[0], 128, 8, stride=4),
-            nn.ReLU(),
+            nn.LeakyReLU(0.2, inplace = True),
             nn.Conv2d(128, 256, 4, stride=2),
-            nn.ReLU(),
+            nn.LeakyReLU(0.2, inplace = True),
             nn.Conv2d(256, 512, 3, stride=1),
-            nn.ReLU())
+            nn.LeakyReLU(0.2, inplace = True))
 
         conv_out_size = self._get_conv_out(input_shape)
         self.fc = nn.Sequential(

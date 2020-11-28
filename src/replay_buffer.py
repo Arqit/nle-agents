@@ -111,7 +111,8 @@ class PrioritizedReplayBuffer(ReplayBuffer): # I should change my above implemen
 
         for idx,priority in zip(indices, priorities):
             #assert priority >0
-            assert 0<= idx<len(self)
+            #assert 0<= idx<len(self)
+            idx = idx%len(self)
 
             self.sum_tree[idx] = priority ** self.alpha
             self.min_tree[idx] = priority ** self.alpha
@@ -129,7 +130,7 @@ class PrioritizedReplayBuffer(ReplayBuffer): # I should change my above implemen
             b = segment *( i+1)
             upperbound = random.uniform(a,b)
             idx = self.sum_tree.retrieve(upperbound)
-            indices.append(idx)
+            indices.append(idx%len(self))
 
         return indices
 

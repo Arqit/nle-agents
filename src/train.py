@@ -24,7 +24,7 @@ def padder(observation):
 if __name__ == '__main__':
     hyper_params = {  # Tinker around with these
         'replay-buffer-size': int(150000),  # replay buffer size
-        'learning-rate': 1e-3,  # learning rate for Adam optimizer --> This is the default learning rate
+        'learning-rate': 1e-3,  # learning rate for RMSprop optimizer
         'discount-factor': 0.99,  # discount factor
         'num-steps': int(100000),  # total number of steps to run the environment for
         'batch-size': 32,  # number of transitions to optimize at the same time
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     random.seed(seed)
 
     env = gym.make("NetHackScore-v0",savedir = None)  # If its automatically picking up gold, then autopickup must be enabled for everything
-    env.seed(hyper_params['seed'])
+    env.seed(seed)
 
     print(env.__dict__)
     # We are used the glyphs, colors and chars stacked as input
@@ -102,6 +102,9 @@ if __name__ == '__main__':
             env.seed(seed,seed,False)
             state = padder(env.reset())
             total_reward = 0
+
+        if t%400000==0:
+            agent.save_network()
 
         if t > hyper_params['learning-starts'] and t % hyper_params['learning-freq'] == 0:
             ans = agent.optimise_td_loss()
