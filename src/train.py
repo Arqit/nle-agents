@@ -26,7 +26,7 @@ if __name__ == '__main__':
         'replay-buffer-size': int(150000),  # replay buffer size
         'learning-rate': 1e-3,  # learning rate for RMSprop optimizer
         'discount-factor': 0.99,  # discount factor
-        'num-steps': int(100000),  # total number of steps to run the environment for
+        'num-steps': int(5e6),  # total number of steps to run the environment for
         'batch-size': 32,  # number of transitions to optimize at the same time
         'learning-starts': 300000,  # number of steps before learning starts
         'learning-freq': 5,  # number of iterations between every optimization step
