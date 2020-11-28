@@ -23,17 +23,17 @@ def padder(observation):
 
 if __name__ == '__main__':
     hyper_params = {  # Tinker around with these
-        'replay-buffer-size': int(150000),  # replay buffer size
-        'learning-rate': 1e-3,  # learning rate for RMSprop optimizer
+        'replay-buffer-size': int(60000),  # replay buffer size
+        'learning-rate': 0.00098,  # learning rate for RMSprop optimizer
         'discount-factor': 0.99,  # discount factor
         'num-steps': int(5e6),  # total number of steps to run the environment for
-        'batch-size': 32,  # number of transitions to optimize at the same time
-        'learning-starts': 300000,  # number of steps before learning starts
+        'batch-size': 64,  # number of transitions to optimize at the same time
+        'learning-starts': 120000,  # number of steps before learning starts
         'learning-freq': 5,  # number of iterations between every optimization step
         'use-double-dqn': True,  # use double deep Q-learning
         'target-update-freq': 1000,  # number of iterations between every target network update
         'eps-start': 1.0,  # e-greedy start threshold  -> Sort this out with the noisy layer stuff!
-        'eps-end': 0.01,  # e-greedy end threshold
+        'eps-end': 0.3,  # e-greedy end threshold
         'eps-fraction': 0.5,  # fraction of num-steps
         'print-freq': 10,
         'alpha': 0.2,
