@@ -24,9 +24,14 @@ class MyAgent(AbstractAgent):
         self.rollout_rewards = []
         self.startingObservation = None
         self.reward_steps = []
+        self.move_stack = []
         
     def act(self,observation):
-        return self.UCTS()
+        if len(self.move_stack) == 0:
+            # print('Did this')
+            self.UCTS()
+        return self.move_stack.pop(-1)
+
 
     def load(self,directory):
         self.tree = Tree(True)
@@ -68,18 +73,44 @@ class MyAgent(AbstractAgent):
         #give all actions taken to arrive at curren node to the current root
         self.tree[self.tree.root]["actions"] = self.actions
         for _ in (range(self.depth)): 
+
             v_1 = self.treePolicy(self.tree.root)
+
+            if self.tree[v_1]['pre_descend'] != -1:
+                #initiate descend macro
+
+                #add descend as child of moving to stairs
+                temp = deepcopy(self.tree[v_1]["actions"])
+                _,_,_ = self.StepEnvironment(v_1)
+                _, _, done, _= self.env.step(18)
+                temp.append(18)
+                child = self.tree.stateCount
+                self.tree.AddState(a = deepcopy(temp)) 
+                self.tree.addChild(v_1,child)
+                self.tree[child]["isTerminal"] = False #descending stairs won't 
+                self.tree[child]['is_good'] = done
+                self.tree[v_1]['good_children'].append(child)
+                best_child = child
+                self.DeletePrior(best_child)
+                self.move_stack = [18,temp[-2]]
+                self.actions.append(temp[-2])
+                self.actions.append(18)
+                return
+
+                
             if self.tree[v_1]['is_good']:
                 delta = self.defaultPolicy(v_1)
             else: 
                 delta = 0
             self.tree.backup(delta, v_1)
         # print(self.tree.dictionary)
+
         best_child = self.tree.bestChild(self.tree.root,0) #select best child without using exploration ?
         a = self.tree[best_child]["actions"][-1]
         self.DeletePrior(best_child)
         self.actions.append(a)
-        return a
+        self.move_stack.append(a)
+        return 
 
 
 
@@ -99,10 +130,23 @@ class MyAgent(AbstractAgent):
         counter = 0
         # print(self.tree[state]['actions'])
         while not done: #and depth > 0:
-            moves = self.getLegalMoves(lstate)
-            action = np.random.choice(moves+[18])
-            lstate, reward, done, d = self.env.step(action)
-            
+            moves,descend = self.getLegalMoves(lstate)
+            '''
+            If you can descend then you must descend! This action
+            yields a great reward and will also stop the rollout
+            '''
+            if len(descend) == 0:
+                action = np.random.choice(moves)
+                lstate, reward, done, _ = self.env.step(action)
+            else:
+                # self.env.render()
+                lstate, reward, done, _ = self.env.step(descend[0])
+                counter+=1
+                # self.env.render()
+                lstate, reward, done, _ = self.env.step(18)
+                # self.env.render()
+
+
             counter += 1
             if counter == 800:
                 break
@@ -141,10 +185,12 @@ class MyAgent(AbstractAgent):
         '''
 #         print('\nstep',state)
         s = self.reset()
+        d = None
+        r = None
         action_list = self.tree[state]["actions"]
         for i in action_list:
-            s,_,_,_ = self.env.step(i)
-        return s
+            s,_,d,r = self.env.step(i)
+        return s,d,r
             
         
     def expand(self,state):
@@ -160,18 +206,33 @@ class MyAgent(AbstractAgent):
         # iterate through current list of actions and expand an unvisited one
         for i in allActions:
             if i not in actions:
-                latest_state = self.StepEnvironment(state)
-                possible_moves = self.getLegalMoves(latest_state)
-                # if state == 0:
-                #     print(possible_moves)
-                _, _, done, _= self.env.step(i)
+                latest_state,_,_ = self.StepEnvironment(state)
+                possible_moves,descend = self.getLegalMoves(latest_state)
+                '''
+                If you are one move away from the stairs then save
+                the direction you need to go in. This is to initiate
+                the descend macro. You will not explore any other actions.
+                i will be turned to the action you need to take to descend.
+                
+                '''
                 temp.append(i)
                 child = self.tree.stateCount
+                if len(descend) == 0:
+                    self.tree[child]['pre_descend'] = -1
+                    _, _, done, _= self.env.step(i)
+                else:
+                    self.tree[child]['pre_descend'] = descend[0]
+                    _, _, done, _= self.env.step(descend[0])
+                    i = descend[0]
+                
+
                 self.tree.AddState(a = deepcopy(temp)) 
                 self.tree.addChild(state,child)
                 self.tree[child]["isTerminal"] = done
-                is_good = i in possible_moves
+                is_good = i in (possible_moves )
                 self.tree[child]['is_good'] = is_good
+
+
 
                 if is_good: #so that best child is only ever chosen from this list
                     self.tree[state]['good_children'].append(child)
@@ -217,12 +278,18 @@ class MyAgent(AbstractAgent):
         return vicinity
 
     def getLegalMoves(self,state):
-        vicinity = self.getSurrounding(state)
-        legals = [int(i==0) or int(i>2359 and i<2370) for i in vicinity.flatten()]
+        vicinity = self.getSurrounding(state).flatten()
+        stairs = np.where(vicinity==2383)
+        descend = len(stairs[0])==1
+        legals = [int(i==0) or int(i>2359 and i<2370) for i in vicinity]
         legals = np.ones(len(legals),dtype=np.int8) - legals
         close_move = [8,1,5,4,19,2,7,3,6] #first eight positions
         legal_close = np.unique(close_move*legals)[1:-1]
         long_move = [16,9,13,12,19,10,15,11,14] #long eight positions
         legal_long = np.unique(long_move*legals)[1:-1]
+        if not descend:
+            descend = []
+        else:
+            descend = [close_move[stairs[0][0]]]
 
-        return list(legal_close)+list(legal_long)
+        return list(legal_close)+list(legal_long),descend
