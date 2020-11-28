@@ -26,7 +26,7 @@ class Tree:
         json.dump(self.dictionary, f, cls=NumpyEncoder)
         print("saving nodes")
         f.close()
-
+    
     def load(self,directory,seed):
         fileName=directory+"/"+str(seed)+".json"
         file = open(fileName, "r")
@@ -46,6 +46,7 @@ class Tree:
         self[index]["actions"] = a
         self[index]["isTerminal"] = False
         self[index]["children"] = []
+        self[index]["good_children"] = []
         self[index]["reward"] = 0
         #self[index]["solo"] = 0
         self[index]["visits"] = 0
@@ -60,7 +61,7 @@ class Tree:
             current = self[current]["parent"]
 
     def addChild(self,parent,child):
-        if self[child]["parent"] == None: #check that ch
+        if self[child]["parent"] == None: #check that the child has no parents
             self[child]["parent"] = parent
             self[parent]["children"].append(child)
     
@@ -72,11 +73,10 @@ class Tree:
         must be found. If no best children are available then the algorithm must track back up.
         '''
         
-        first = np.divide([self[self[current]["children"][i]]["reward"] for i in range(len(self[current]["children"]))],[self[self[current]["children"][i]]["visits"] for i in range(len(self[current]["children"]))])
-        second = np.sqrt(np.divide(2*np.log(self[current]["visits"]),[self[self[current]["children"][i]]["visits"] for i in range(len(self[current]["children"]))]))
-        return self[current]["children"][np.argmax(first+c*second)]
-    
-    def __del__(self):
+        first = np.divide([self[self[current]["good_children"][i]]["reward"] for i in range(len(self[current]["good_children"]))],[self[self[current]["good_children"][i]]["visits"] for i in range(len(self[current]["good_children"]))])
+        second = np.sqrt(np.divide(2*np.log(self[current]["visits"]),[self[self[current]["good_children"][i]]["visits"] for i in range(len(self[current]["good_children"]))]))
+        return self[current]["good_children"][np.argmax(first+c*second)]
+    def __del__(self):  
         del self.dictionary
 
     def __getitem__(self, index):

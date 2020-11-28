@@ -15,12 +15,12 @@ def run_episode(env, seed, agent, directory, load=True):
     env.seed(seed,seed,False)
     state = env.reset()
     count = 0
-    if load:
-        episode_return = agent.load(directory)
-        action_list = agent.actions
-        for i in action_list:
-            _,_,_,_ = env.step(i)
-            count+=1
+    # if load:
+    #     episode_return = agent.load(directory)
+    #     action_list = agent.actions
+    #     for i in action_list:
+    #         _,_,_,_ = env.step(i)
+    #         count+=1
     while not done:
         # pass state to agent and let agent decide action
         action = agent.act(None)
@@ -44,11 +44,13 @@ print(seeds)
 env = gym.make("NetHackScore-v0")
 # Number of times each seed will be run
 num_runs = 1#0
-# Run a few episodes on each seed
+# Run a few episodes on each seed   
 rewards = []
 directory = os.getcwd()
 for seed in seeds:
     seed_rewards = []
+    env.seed(seed,seed,False)
+    env.reset()
     agent =  MyAgent(env.observation_space, env.action_space, seeds=env.get_seeds())
     #for i in range(num_runs):
     seed_rewards.append(run_episode(env, seed,agent, directory))
