@@ -5,15 +5,22 @@ import torch.nn as nn
 from gym import spaces
 import numpy as np
 
+def padder(observation):
+    padded_world = np.zeros((3, 79, 79))
+    state = torch.cat((torch.cat((torch.unsqueeze(torch.from_numpy(observation['glyphs']), 0), torch.unsqueeze(torch.from_numpy(observation['colors']), 0))),
+                       torch.unsqueeze(torch.from_numpy(observation['chars']), 0)))
+    padded_world[:, 29:50, :] = state  # Pad the image so that it is square!
+    new_world = torch.tensor(padded_world)
+    return new_world
 
-device = "cuda"
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class MyAgent(AbstractAgent):
     def __init__(self, observation_space, action_space, **kwargs):
         global device
-        self.observation_space = observation_space
+        self.observation_space = np.zeros((3,79,79))
         self.action_space = action_space
-        if kwargs.get("train", None):
+        if kwargs.get("train", False):
             self.replay_buffer = kwargs.get("replay_buffer",None)
             self.use_double_dqn = kwargs.get("use_double_dqn", None)
             self.lr = kwargs.get("lr",None)
@@ -29,9 +36,8 @@ class MyAgent(AbstractAgent):
 
         else:
             self.seeds = kwargs.get('seeds', None)
-            device = torch.device(('cuda:0' if torch.cuda.is_available() else 'cpu'))
             self.Q = DQN(self.observation_space,self.action_space).to(device)
-            self.Q.load_state_dict(torch.load('/content/drive/MyDrive/The_weights.pth',map_location=device))
+            self.Q.load_state_dict(torch.load('The_weights4.pth',map_location=device)) # Will be fixed!
 
     def optimise_td_loss(self):
         """
@@ -80,9 +86,14 @@ class MyAgent(AbstractAgent):
 
     def act(self, observation):
         # Select action greedily from the Q-network given the state
-        the_state = observation.type(torch.cuda.FloatTensor)
-        the_answer = self.Q.forward(the_state).cpu()
-        action = torch.argmax(the_answer)
+        if torch.cuda.is_available() ==False:
+            observation = (padder(observation)).type(torch.FloatTensor)
+        else:
+            observation = (padder(observation)).type(torch.cuda.FloatTensor)
+        the_state = torch.unsqueeze(observation, 0).to(device)
+        #the_state = observation.to(device)
+        the_answer = self.Q.forward(the_state)
+        action = torch.argmax(the_answer).item()
         return action
 
 
