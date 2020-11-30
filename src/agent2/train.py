@@ -33,7 +33,7 @@ if __name__ == '__main__':
         'use-double-dqn': True,  # use double deep Q-learning
         'target-update-freq': 1000,  # number of iterations between every target network update
         'eps-start': 1.0,  # e-greedy start threshold  -> Sort this out with the noisy layer stuff!
-        'eps-end': 0.3,  # e-greedy end threshold
+        'eps-end': 0.1,  # e-greedy end threshold
         'eps-fraction': 0.5,  # fraction of num-steps
         'print-freq': 10,
         'alpha': 0.2,
@@ -45,15 +45,17 @@ if __name__ == '__main__':
     np.random.seed(seed)
     random.seed(seed)
 
-    env = gym.make("NetHackScore-v0",savedir = None)  # We disable saving the ttyrec files as it is unneccesary when training
+    env = gym.make("NetHackScout-v0",savedir = None)  # We disable saving the ttyrec files as it is unneccesary when training
+    env.penalty_step = -10
+    env.penalty_time = -0.01
     env.seed(seed)
     count = 0
 
     print(env.__dict__)
     # We are used the glyphs, colors and chars stacked as input
-    replay_buffer = PrioritizedReplayBuffer(hyper_params['replay-buffer-size'], batch_size=hyper_params['batch-size'], alpha=hyper_params['alpha'])
+    replay_buffer = PrioritizedReplayBuffer(env.observation_space.shape[0], hyper_params['replay-buffer-size'], batch_size=hyper_params['batch-size'], alpha=hyper_params['alpha'])
     agent = MyAgent(
-        env.environment_space,  # assuming that we are taking the world as input
+        env.observation_space,  # assuming that we are taking the world as input
         env.action_space,
         train=True,
         replay_buffer=replay_buffer,
@@ -71,7 +73,7 @@ if __name__ == '__main__':
     scores = []
 
     eps_timesteps = hyper_params['eps-fraction'] * float(hyper_params['num-steps']) # This is the efficient way we use to anneal epsilon ( Analogous to the DQN lab)
-
+    food = 5
     state = env.reset()
 
     for t in range(1, hyper_params['num-steps'] + 1):
@@ -79,15 +81,18 @@ if __name__ == '__main__':
         eps_threshold = hyper_params["eps-start"] + fract * (hyper_params["eps-end"] - hyper_params["eps-start"])
 
         if random.random() < eps_threshold:  # Will presumably be replaced by the Noisy Layer stuff
-            action = np.random.choice(agent.action_space.n)
+            action = np.random.choice(agent.action_space.n) # Sort this out when we constrain the action sapce
         else:
-            action = agent.act(torch.unsqueeze(state, 0)).item()
-
-        #if action == 21:  # The eating 'macro' which attempts to handle the food selection issue (the developers need to get their act together)
-        #    action = 19  # Just get the agent to wait until we chose an action other than 'EAT'
-
-        (state_prime, reward, done, _) = env.step(action) # take a step in the environment
-        replay_buffer.add(state, action, reward, state_prime, float(done))
+            action = agent.act(state)
+        # Sort this out
+        if action == 21 and food>0:  # The eating 'macro' which attempts to handle the food selection issue (the developers need to get their act together)
+             (state_prime, reward1, done, _) = env.step(21)
+             (state_prime, reward2, done, _) = env.step(4)
+             food - = 1
+             reward = reward1 + reward2
+        else:
+            (state_prime, reward, done, _) = env.step(action) # take a step in the environment
+        replay_buffer.store(state, action, reward, state_prime, float(done))
         total_reward += reward
         state = state_prime
 
@@ -98,7 +103,7 @@ if __name__ == '__main__':
             scores.append(total_reward)
             wandb.log({"Episode Reward": total_reward, "Steps": t})
             wandb.log({"Episode Reward": total_reward, "Episodes": len(scores) + 1})
-            seed = int(np.random.uniform(1,10000))
+            seed = np.random.randint(1,10000)
             env.seed(seed,seed,False)
             state = padder(env.reset())
             total_reward = 0

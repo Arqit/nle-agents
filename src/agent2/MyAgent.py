@@ -44,14 +44,14 @@ class MyAgent(AbstractAgent):
         Optimise the TD-error over a single minibatch of transitions
         :return: the loss
         """
-        samples = self.replay_buffer.sample(self.beta) # Sample the replay buffer
-        state = torch.FloatTensor(samples[0]).to(device) # Extract the necessary information (self-explanatory)
-        action = torch.LongTensor(samples[1].reshape(-1, 1)).to(device)
-        reward = torch.FloatTensor(samples[2].reshape(-1, 1)).to(device)
-        next_state = torch.FloatTensor(samples[3]).to(device)
-        done = torch.FloatTensor(samples[4].reshape(-1, 1)).to(device)
-        weights = torch.FloatTensor(samples[5].reshape(-1, 1)).to(device)
-        indices = samples[6]
+        samples = self.replay_buffer.sample_batch(self.beta) # Sample the replay buffer
+        state = torch.FloatTensor(samples["obs"]).to(device)
+        next_state = torch.FloatTensor(samples["next_obs"]).to(device)
+        action = torch.LongTensor(samples["acts"].reshape(-1, 1)).to(device)
+        reward = torch.FloatTensor(samples["rews"].reshape(-1, 1)).to(device)
+        done = torch.FloatTensor(samples["done"].reshape(-1, 1)).to(device)
+        weights = torch.FloatTensor(samples["weights"].reshape(-1, 1)).to(device)
+        indices = samples["indices"]
 
         curr_q_value = self.Q(state).gather(1, action) # Perform a forward pass for all the samples that we sampled from the replay buffer
         next_q_value = self.Q_hat(next_state).max(dim=1, keepdim=True)[0].detach()
@@ -194,10 +194,10 @@ class DQN(nn.Module):
             nn.LeakyReLU(0.2, inplace = True))
 
         conv_out_size = self._get_conv_out(input_shape)
-        self.fc = nn.Sequential(
-            nn.Linear(conv_out_size, 1024),
-            nn.ReLU(),
-            nn.Linear(1024, action_space.n))
+        # self.fc = nn.Sequential(
+        #     nn.Linear(conv_out_size, 1024),
+        #     nn.ReLU(),
+        #     nn.Linear(1024, action_space.n))
 
         # Set up the duelling network
         self.fc_layer_initial = nn.Sequential(
