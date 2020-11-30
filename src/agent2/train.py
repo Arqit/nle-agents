@@ -41,15 +41,20 @@ if __name__ == '__main__':
         'prior_eps': 1e-6
     }
 
+    print(hyper_params)
     seed = np.random.randint(0,10000)
     np.random.seed(seed)
     random.seed(seed)
 
     env = gym.make("NetHackScout-v0",savedir = None)  # We disable saving the ttyrec files as it is unneccesary when training
     env.penalty_step = -10
-    env.penalty_time = -0.01
+    env.penalty_time = -1
     env.seed(seed)
-    count = 0
+    action_nums = [0,1,2,3,4,9,10,11,12,17,18,20,21,22]
+    env.__dict__['_actions'] = tuple([env.__dict__['_actions'][i] for i in action_nums])
+    env.action_space.n = len(action_nums)
+
+
 
     print(env.__dict__)
     # We are used the glyphs, colors and chars stacked as input
@@ -74,7 +79,7 @@ if __name__ == '__main__':
 
     eps_timesteps = hyper_params['eps-fraction'] * float(hyper_params['num-steps']) # This is the efficient way we use to anneal epsilon ( Analogous to the DQN lab)
     food = 5
-    state = env.reset()
+    state = padder(env.reset())
 
     for t in range(1, hyper_params['num-steps'] + 1):
         fract = min(1.0, float(t) / eps_timesteps)  # Sort this out with the noisy layer stuff
@@ -88,10 +93,11 @@ if __name__ == '__main__':
         if action == 21 and food>0:  # The eating 'macro' which attempts to handle the food selection issue (the developers need to get their act together)
              (state_prime, reward1, done, _) = env.step(21)
              (state_prime, reward2, done, _) = env.step(4)
-             food - = 1
+             food -= 1
              reward = reward1 + reward2
         else:
             (state_prime, reward, done, _) = env.step(action) # take a step in the environment
+        state_prime = padder(state_prime)
         replay_buffer.add(state, action, reward, state_prime, float(done))
         total_reward += reward
         state = state_prime

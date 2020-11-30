@@ -1,13 +1,14 @@
 from typing import Dict, List, Tuple
 import numpy as np
 import random
+from segment_tree import *
 
 class ReplayBuffer:
     """
     Simple storage for transitions from an environment.
     """
 
-    def __init__(self, size):
+    def __init__(self, size, batch_size):
         """
         Initialise a buffer of a given size for storing transitions
         :param size: the maximum number of transitions that can be stored
@@ -15,6 +16,7 @@ class ReplayBuffer:
         self._storage = []
         self._maxsize = size
         self._next_idx = 0
+        self.batch_size = batch_size
 
     def __len__(self):
         return len(self._storage)
@@ -54,13 +56,13 @@ class ReplayBuffer:
             np.array(dones),
         )
 
-    def sample(self, batch_size):
+    def sample(self):
         """
         Randomly sample a batch of transitions from the buffer.
         :param batch_size: the number of transitions to sample
         :return: a mini-batch of sampled transitions
         """
-        indices = np.random.randint(0, len(self._storage) - 1, size=batch_size)
+        indices = np.random.randint(0, len(self._storage) - 1, size=self.batch_size)
         return self._encode_sample(indices)
 
 class PrioritizedReplayBuffer(ReplayBuffer):
@@ -85,7 +87,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
         # capacity must be positive and a power of 2.
         tree_capacity = 1
-        while tree_capacity < self.max_size:
+        while tree_capacity < self._maxsize:
             tree_capacity *= 2
 
         self.sum_tree = SumSegmentTree(tree_capacity)
@@ -97,7 +99,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
         self.sum_tree[self.tree_ptr] = self.max_priority ** self.alpha
         self.min_tree[self.tree_ptr] = self.max_priority ** self.alpha
-        self.tree_ptr = (self.tree_ptr + 1) % self.max_size
+        self.tree_ptr = (self.tree_ptr + 1) % self._maxsize
 
     def _encode_sample(self, indices):
         states, actions, rewards, next_states, dones = [], [], [], [], []
@@ -120,8 +122,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
         states,actions,rewards,next_states,dones = self._encode_sample(indices)
         weights = np.array([self._calculate_weight(i, beta) for i in indices])
-
-        return [states, actions, rewards, next_states,dones, weights, indices]
+        return (states, actions, rewards, next_states,dones, weights, indices)
 
     def update_priorities(self, indices, priorities):
         """Update priorities of sampled transitions."""
