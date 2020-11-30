@@ -45,7 +45,7 @@ if __name__ == '__main__':
     np.random.seed(seed)
     random.seed(seed)
 
-    env = gym.make("NetHackScore-v0",savedir = None)  # If its automatically picking up gold, then autopickup must be enabled for everything
+    env = gym.make("NetHackScore-v0",savedir = None)  # We disable saving the ttyrec files as it is unneccesary when training
     env.seed(seed)
     count = 0
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     # We are used the glyphs, colors and chars stacked as input
     replay_buffer = PrioritizedReplayBuffer(hyper_params['replay-buffer-size'], batch_size=hyper_params['batch-size'], alpha=hyper_params['alpha'])
     agent = MyAgent(
-        np.zeros((3, 79, 79)),  # assuming that we are taking the world as input
+        env.environment_space,  # assuming that we are taking the world as input
         env.action_space,
         train=True,
         replay_buffer=replay_buffer,
@@ -70,9 +70,9 @@ if __name__ == '__main__':
     losses = []
     scores = []
 
-    eps_timesteps = hyper_params['eps-fraction'] * float(hyper_params['num-steps'])
+    eps_timesteps = hyper_params['eps-fraction'] * float(hyper_params['num-steps']) # This is the efficient way we use to anneal epsilon ( Analogous to the DQN lab)
 
-    state = padder(env.reset())
+    state = env.reset()
 
     for t in range(1, hyper_params['num-steps'] + 1):
         fract = min(1.0, float(t) / eps_timesteps)  # Sort this out with the noisy layer stuff
@@ -86,13 +86,12 @@ if __name__ == '__main__':
         #if action == 21:  # The eating 'macro' which attempts to handle the food selection issue (the developers need to get their act together)
         #    action = 19  # Just get the agent to wait until we chose an action other than 'EAT'
 
-        (state_prime, reward, done, _) = env.step(action)
-        # env.render()
-        state_prime = padder(state_prime)
+        (state_prime, reward, done, _) = env.step(action) # take a step in the environment
         replay_buffer.add(state, action, reward, state_prime, float(done))
         total_reward += reward
         state = state_prime
 
+        # This is used to adjust beta accordingly
         fraction = min(t / hyper_params['num-steps'], 1.0)
         agent.beta = agent.beta + fraction * (1.0 - agent.beta)
         if done:

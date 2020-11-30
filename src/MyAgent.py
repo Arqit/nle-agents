@@ -4,13 +4,14 @@ import torch
 import torch.nn as nn
 from gym import spaces
 import numpy as np
+import math
 
-def padder(observation):
+def padder(observation): # Embeds the world in a square ( as it is common practice for input to a CNN to be square)
     padded_world = np.zeros((3, 79, 79))
     state = torch.cat((torch.cat((torch.unsqueeze(torch.from_numpy(observation['glyphs']), 0), torch.unsqueeze(torch.from_numpy(observation['colors']), 0))),
-                       torch.unsqueeze(torch.from_numpy(observation['chars']), 0)))
-    padded_world[:, 29:50, :] = state  # Pad the image so that it is square!
-    new_world = torch.tensor(padded_world)
+                       torch.unsqueeze(torch.from_numpy(observation['chars']), 0))) # Stack the glyph, colors and char worlds
+    padded_world[:, 29:50, :] = state  # Pad the image so that it is square! -> Embed the world
+    new_world = torch.tensor(padded_world) # Convert to tensor
     return new_world
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -18,9 +19,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 class MyAgent(AbstractAgent):
     def __init__(self, observation_space, action_space, **kwargs):
         global device
-        self.observation_space = np.zeros((3,79,79))
+        self.observation_space = np.zeros((3,79,79)) # This is harc-docded here because this could not be done in in evaluation.py... Ensures that the input of the world is the correct size
         self.action_space = action_space
-        if kwargs.get("train", False):
+        if kwargs.get("train", False): # Because we are having to instantiate the world for training and testing, each having different requirements, we make the distinction here
             self.replay_buffer = kwargs.get("replay_buffer",None)
             self.use_double_dqn = kwargs.get("use_double_dqn", None)
             self.lr = kwargs.get("lr",None)
@@ -28,24 +29,23 @@ class MyAgent(AbstractAgent):
             self.discount_factor = kwargs.get("discount_factor",None)
             self.beta = kwargs.get("beta",None)
             self.prior_eps = kwargs.get("prior_eps",None)
-            self.Q = DQN(observation_space, action_space).to(device)
-            self.Q_hat = DQN(observation_space, action_space).to(device)
-            self.Q_hat.load_state_dict(self.Q.state_dict())
-            self.Q_hat.eval()
-            self.optimizer = torch.optim.RMSprop(self.Q.parameters(), lr=self.lr, momentum = 0.95)
+            self.Q = DQN(observation_space, action_space).to(device) # Usual Q netwok
+            self.Q_hat = DQN(observation_space, action_space).to(device) # Target Q Network
+            self.Q_hat.load_state_dict(self.Q.state_dict()) # Load the weights
+            self.optimizer = torch.optim.RMSprop(self.Q.parameters(), lr=self.lr, momentum = 0.95) # We empirically discovered that RMSprop performs better than Adam
 
         else:
             self.seeds = kwargs.get('seeds', None)
-            self.Q = DQN(self.observation_space,self.action_space).to(device)
-            self.Q.load_state_dict(torch.load('The_weights4.pth',map_location=device)) # Will be fixed!
+            self.Q = DQN(self.observation_space,self.action_space).to(device) # We only need the one network when testing
+            self.Q.load_state_dict(torch.load('The_weights4.pth',map_location=device)) # Load the pre-trained weights
 
     def optimise_td_loss(self):
         """
         Optimise the TD-error over a single minibatch of transitions
         :return: the loss
         """
-        samples = self.replay_buffer.sample(self.beta)
-        state = torch.FloatTensor(samples[0]).to(device)
+        samples = self.replay_buffer.sample(self.beta) # Sample the replay buffer
+        state = torch.FloatTensor(samples[0]).to(device) # Extract the necessary information (self-explanatory)
         action = torch.LongTensor(samples[1].reshape(-1, 1)).to(device)
         reward = torch.FloatTensor(samples[2].reshape(-1, 1)).to(device)
         next_state = torch.FloatTensor(samples[3]).to(device)
@@ -53,23 +53,23 @@ class MyAgent(AbstractAgent):
         weights = torch.FloatTensor(samples[5].reshape(-1, 1)).to(device)
         indices = samples[6]
 
-        curr_q_value = self.Q(state).gather(1, action)
+        curr_q_value = self.Q(state).gather(1, action) # Perform a forward pass for all the samples that we sampled from the replay buffer
         next_q_value = self.Q_hat(next_state).max(dim=1, keepdim=True)[0].detach()
         mask = 1 - done
         target = (reward + self.discount_factor * next_q_value * mask).to(device)
 
         # calculate element-wise dqn loss
-        elementwise_loss = F.smooth_l1_loss(curr_q_value, target, reduction="none")
+        elementwise_loss = F.smooth_l1_loss(curr_q_value, target, reduction="none") # This is similiar the to MSE when the loss is bigger, and acts like ___ when the loss is small
         loss = torch.mean(elementwise_loss * weights)
 
         self.optimizer.zero_grad()
-        loss.backward()
+        loss.backward() # Perform backprop
         self.optimizer.step()
 
         # PER: update priorities
         loss_for_prior = elementwise_loss.detach().cpu().numpy()
         new_priorities = loss_for_prior + self.prior_eps
-        self.replay_buffer.update_priorities(indices, new_priorities)
+        self.replay_buffer.update_priorities(indices, new_priorities) # Update the priorities of the samples that we sampled from the replay buffer
 
         return loss.item()
 
@@ -87,17 +87,16 @@ class MyAgent(AbstractAgent):
     def act(self, observation):
         # Select action greedily from the Q-network given the state
         if torch.cuda.is_available() ==False:
-            observation = (padder(observation)).type(torch.FloatTensor)
+            observation = (padder(observation)).type(torch.FloatTensor) # convert to a cpu float tensor if an GPU  is not available
         else:
-            observation = (padder(observation)).type(torch.cuda.FloatTensor)
+            observation = (padder(observation)).type(torch.cuda.FloatTensor) # push the observation to the GPU and convert to a FloatTensor
         the_state = torch.unsqueeze(observation, 0).to(device)
-        #the_state = observation.to(device)
         the_answer = self.Q.forward(the_state)
         action = torch.argmax(the_answer).item()
         return action
 
 
-class Noisy_Layer(nn.Module):
+class Noisy_Layer(nn.Module): # JOSH, PLEASE COMMENT THIS!!!
     """
     A form of linear layer that can be used to inject random noise into model that is a different exploration policy than e-greedy"""
 
@@ -186,7 +185,7 @@ class DQN(nn.Module):
 
         input_shape = observation_space.shape
         # Set up the convolutional neural section
-        self.conv = nn.Sequential(
+        self.conv = nn.Sequential( # A sufficient large DQN network which we feel has sufficient model capacity
             nn.Conv2d(input_shape[0], 128, 8, stride=4),
             nn.LeakyReLU(0.2, inplace = True),
             nn.Conv2d(128, 256, 4, stride=2),
@@ -226,7 +225,7 @@ class DQN(nn.Module):
 
     def _get_conv_out(self, shape):
         """
-        Get the output of the convolution layers to feed in to the fc layers
+        Get the output of the convolution layers to feed in to the fc layers - (Used to determine the size of the output of the first part of the network)
         """
         o = self.conv(torch.zeros(1, *shape))
         return int(np.prod(o.size()))
