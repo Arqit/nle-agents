@@ -74,7 +74,7 @@ class Tree:
         
         first = np.divide([self[self[current]["children"][i]]["reward"] for i in range(len(self[current]["children"]))],[self[self[current]["children"][i]]["visits"] for i in range(len(self[current]["children"]))])
         second = np.sqrt(np.divide(2*np.log(self[current]["visits"]),[self[self[current]["children"][i]]["visits"] for i in range(len(self[current]["children"]))]))
-        return self[current]["children"][np.argmax(first+c*second)]
+		return self[current]["children"][np.argmax(first+c*second)]
     
     def __del__(self):
         del self.dictionary

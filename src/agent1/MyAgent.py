@@ -2,7 +2,6 @@ from AbstractAgent import AbstractAgent
 from Node import Tree
 import numpy as np
 from copy import deepcopy
-from tqdm import tqdm
 import nle
 import gym
 
@@ -11,7 +10,7 @@ class MyAgent(AbstractAgent):
         self.env = gym.make('NetHackScore-v0', savedir=None)
         self.observation_space = observation_space
         self.action_space = action_space
-        self.seed = kwargs.get('seeds', None)[0]
+        self.seeds = kwargs.get('seeds', None)
         self.reset()
         self.tree = None
         self.actions = []
@@ -23,12 +22,12 @@ class MyAgent(AbstractAgent):
 
     def load(self,directory):
         self.tree = Tree(True)
-        reward = self.tree.load(directory,self.seed)
+        reward = self.tree.load(directory,self.seeds[0])
         self.actions = self.tree[self.tree.root]['actions']
         return reward
 
     def save(self, reward,directory):
-        self.tree.save(reward,directory,self.seed)
+        self.tree.save(reward,directory,self.seeds[0])
     
     def resetAgent(self):
         self.reset()
@@ -52,7 +51,7 @@ class MyAgent(AbstractAgent):
 
     
     def reset(self):
-        self.env.seed(self.seed,self.seed,False)
+        self.env.seed(*self.seeds)
         self.env.reset()
 
     def UCTS(self):
@@ -77,16 +76,16 @@ class MyAgent(AbstractAgent):
         a random policy. The reward for the path is returned
         so that it can be backed up. '''
         self.StepEnvironment(self.tree[state]['parent']) 
-        _,total,_,_ = self.env.step(self.tree[state]['actions'][-1])
+        _,total,done,_ = self.env.step(self.tree[state]['actions'][-1])
         
         # if (np.all(np.array(obs["message"][:14]) == np.array([82, 101, 97, 108, 108, 121, 32, 97, 116, 116, 97, 99, 107]))):
         #     total -= 1000
-        done = self.tree[state]['isTerminal']
-        
+        #done = self.tree[state]['isTerminal']
+        #depth = 50
         if done:
             return total#self.tree[state]['reward']
 
-        while not done: #and depth > 0:
+        while not done:# and depth > 0:
             action = np.random.choice(self.action_space.n)
             state, reward, done, _ = self.env.step(action)
             total += reward
@@ -104,7 +103,9 @@ class MyAgent(AbstractAgent):
         self.reset()
         action_list = self.tree[state]["actions"]
         for i in action_list:
-            _,_,_,_ = self.env.step(i)
+            _,_,done,_ = self.env.step(i)
+            if done:
+                break
 
             
         
