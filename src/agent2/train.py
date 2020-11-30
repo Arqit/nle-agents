@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     print(env.__dict__)
     # We are used the glyphs, colors and chars stacked as input
-    replay_buffer = PrioritizedReplayBuffer(env.observation_space.shape[0], hyper_params['replay-buffer-size'], batch_size=hyper_params['batch-size'], alpha=hyper_params['alpha'])
+    replay_buffer = PrioritizedReplayBuffer(hyper_params['replay-buffer-size'], batch_size=hyper_params['batch-size'], alpha=hyper_params['alpha'])
     agent = MyAgent(
         env.observation_space,  # assuming that we are taking the world as input
         env.action_space,
@@ -92,7 +92,7 @@ if __name__ == '__main__':
              reward = reward1 + reward2
         else:
             (state_prime, reward, done, _) = env.step(action) # take a step in the environment
-        replay_buffer.store(state, action, reward, state_prime, float(done))
+        replay_buffer.add(state, action, reward, state_prime, float(done))
         total_reward += reward
         state = state_prime
 

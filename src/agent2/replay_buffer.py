@@ -3,43 +3,65 @@ import numpy as np
 import random
 
 class ReplayBuffer:
-    """A simple numpy replay buffer."""
+    """
+    Simple storage for transitions from an environment.
+    """
 
-    def __init__(self, obs_dim: int, size: int, batch_size: int = 32):
-        self.obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
-        self.next_obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
-        self.acts_buf = np.zeros([size], dtype=np.float32)
-        self.rews_buf = np.zeros([size], dtype=np.float32)
-        self.done_buf = np.zeros(size, dtype=np.float32)
-        self.max_size, self.batch_size = size, batch_size
-        self.ptr, self.size, = 0, 0
+    def __init__(self, size):
+        """
+        Initialise a buffer of a given size for storing transitions
+        :param size: the maximum number of transitions that can be stored
+        """
+        self._storage = []
+        self._maxsize = size
+        self._next_idx = 0
 
-    def store(
-        self,
-        obs: np.ndarray,
-        act: np.ndarray,
-        rew: float,
-        next_obs: np.ndarray,
-        done: bool,
-    ):
-        self.obs_buf[self.ptr] = obs
-        self.next_obs_buf[self.ptr] = next_obs
-        self.acts_buf[self.ptr] = act
-        self.rews_buf[self.ptr] = rew
-        self.done_buf[self.ptr] = done
-        self.ptr = (self.ptr + 1) % self.max_size
-        self.size = min(self.size + 1, self.max_size)
+    def __len__(self):
+        return len(self._storage)
 
-    def sample_batch(self) -> Dict[str, np.ndarray]:
-        idxs = np.random.choice(self.size, size=self.batch_size, replace=False)
-        return dict(obs=self.obs_buf[idxs],
-                    next_obs=self.next_obs_buf[idxs],
-                    acts=self.acts_buf[idxs],
-                    rews=self.rews_buf[idxs],
-                    done=self.done_buf[idxs])
+    def add(self, state, action, reward, next_state, done):
+        """
+        Add a transition to the buffer. Old transitions will be overwritten if the buffer is full.
+        :param state: the agent's initial state
+        :param action: the action taken by the agent
+        :param reward: the reward the agent received
+        :param next_state: the subsequent state
+        :param done: whether the episode terminated
+        """
+        data = (state, action, reward, next_state, done)
 
-    def __len__(self) -> int:
-        return self.size
+        if self._next_idx >= len(self._storage):
+            self._storage.append(data)
+        else:
+            self._storage[self._next_idx] = data
+        self._next_idx = (self._next_idx + 1) % self._maxsize
+
+    def _encode_sample(self, indices):
+        states, actions, rewards, next_states, dones = [], [], [], [], []
+        for i in indices:
+            data = self._storage[i]
+            state, action, reward, next_state, done = data
+            states.append(np.array(state, copy=False))
+            actions.append(action)
+            rewards.append(reward)
+            next_states.append(np.array(next_state, copy=False))
+            dones.append(done)
+        return (
+            np.array(states),
+            np.array(actions),
+            np.array(rewards),
+            np.array(next_states),
+            np.array(dones),
+        )
+
+    def sample(self, batch_size):
+        """
+        Randomly sample a batch of transitions from the buffer.
+        :param batch_size: the number of transitions to sample
+        :return: a mini-batch of sampled transitions
+        """
+        indices = np.random.randint(0, len(self._storage) - 1, size=batch_size)
+        return self._encode_sample(indices)
 
 class PrioritizedReplayBuffer(ReplayBuffer):
     """Prioritized Replay buffer.
@@ -53,17 +75,11 @@ class PrioritizedReplayBuffer(ReplayBuffer):
 
     """
 
-    def __init__(
-        self,
-        obs_dim: int,
-        size: int,
-        batch_size: int = 32,
-        alpha: float = 0.6
-    ):
+    def __init__(self ,size: int,batch_size: int = 32,alpha: float = 0.6):
         """Initialization."""
         assert alpha >= 0
 
-        super(PrioritizedReplayBuffer, self).__init__(obs_dim, size, batch_size)
+        super(PrioritizedReplayBuffer, self).__init__(size, batch_size)
         self.max_priority, self.tree_ptr = 1.0, 0
         self.alpha = alpha
 
@@ -75,52 +91,45 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         self.sum_tree = SumSegmentTree(tree_capacity)
         self.min_tree = MinSegmentTree(tree_capacity)
 
-    def store(
-        self,
-        obs: np.ndarray,
-        act: int,
-        rew: float,
-        next_obs: np.ndarray,
-        done: bool
-    ):
+    def add(self,obs,act,rew,next_obs,done):
         """Store experience and priority."""
-        super().store(obs, act, rew, next_obs, done)
+        super().add(obs, act, rew, next_obs, done)
 
         self.sum_tree[self.tree_ptr] = self.max_priority ** self.alpha
         self.min_tree[self.tree_ptr] = self.max_priority ** self.alpha
         self.tree_ptr = (self.tree_ptr + 1) % self.max_size
 
-    def sample_batch(self, beta: float = 0.4) -> Dict[str, np.ndarray]:
+    def _encode_sample(self, indices):
+        states, actions, rewards, next_states, dones = [], [], [], [], []
+        for i in indices:
+            data = self._storage[i%len(self)]
+            state, action, reward, next_state, done = data
+            states.append(np.array(state, copy=False))
+            actions.append(action)
+            rewards.append(reward)
+            next_states.append(np.array(next_state, copy=False))
+            dones.append(done)
+        return np.array(states),np.array(actions),np.array(rewards),np.array(next_states),np.array(dones)
+
+    def sample_batch(self, beta = 0.4) :
         """Sample a batch of experiences."""
         assert len(self) >= self.batch_size
         assert beta > 0
 
         indices = self._sample_proportional()
 
-        obs = self.obs_buf[indices]
-        next_obs = self.next_obs_buf[indices]
-        acts = self.acts_buf[indices]
-        rews = self.rews_buf[indices]
-        done = self.done_buf[indices]
+        states,actions,rewards,next_states,dones = self._encode_sample(indices)
         weights = np.array([self._calculate_weight(i, beta) for i in indices])
 
-        return dict(
-            obs=obs,
-            next_obs=next_obs,
-            acts=acts,
-            rews=rews,
-            done=done,
-            weights=weights,
-            indices=indices,
-        )
+        return [states, actions, rewards, next_states,dones, weights, indices]
 
-    def update_priorities(self, indices: List[int], priorities: np.ndarray):
+    def update_priorities(self, indices, priorities):
         """Update priorities of sampled transitions."""
         assert len(indices) == len(priorities)
 
         for idx, priority in zip(indices, priorities):
-            assert priority > 0
-            assert 0 <= idx < len(self)
+            #assert priority > 0
+            #assert 0 <= idx < len(self)
 
             self.sum_tree[idx] = priority ** self.alpha
             self.min_tree[idx] = priority ** self.alpha
@@ -138,7 +147,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             b = segment * (i + 1)
             upperbound = random.uniform(a, b)
             idx = self.sum_tree.retrieve(upperbound)
-            indices.append(idx)
+            indices.append(idx%len(self))
 
         return indices
 
