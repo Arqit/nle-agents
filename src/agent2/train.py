@@ -47,13 +47,10 @@ if __name__ == '__main__':
     np.random.seed(seed)
     random.seed(seed)
 
-    env = gym.make("NetHackScout-v0",savedir = None)  # We disable saving the ttyrec files as it is unneccesary when training
-    env.penalty_step = -10
-    env.penalty_time = -1
+    env = gym.make("NetHackScore-v0",savedir = None)  # We disable saving the ttyrec files as it is unneccesary when training
+
     env.seed(seed)
-    action_nums = [0,1,2,3,4,9,10,11,12,17,18,20,21,22]
-    env.__dict__['_actions'] = tuple([env.__dict__['_actions'][i] for i in action_nums])
-    env.action_space.n = len(action_nums)
+
 
 
 
@@ -106,7 +103,7 @@ if __name__ == '__main__':
         # This is used to adjust beta accordingly
         fraction = min(t / hyper_params['num-steps'], 1.0)
         agent.beta = agent.beta + fraction * (1.0 - agent.beta)
-        if done:
+        if done: #If an episode is done, store the reward and log it
             scores.append(total_reward)
             wandb.log({"Episode Reward": total_reward, "Steps": t})
             wandb.log({"Episode Reward": total_reward, "Episodes": len(scores) + 1})
@@ -115,11 +112,11 @@ if __name__ == '__main__':
             state = padder(env.reset())
             total_reward = 0
 
-        if t%400000==0:
+        if t%400000==0: #Save the network after a set number of steps
             agent.save_network(count)
             count+=1
 
-        if t > hyper_params['learning-starts'] and t % hyper_params['learning-freq'] == 0:
+        if t > hyper_params['learning-starts'] and t % hyper_params['learning-freq'] == 0: #When to start the learning process
             ans = agent.optimise_td_loss()
             wandb.log({"Loss":ans, "Steps":t})
             wandb.log({"Loss":ans, "Episodes":len(scores)+1})
