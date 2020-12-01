@@ -5,6 +5,7 @@ import torch.nn as nn
 from gym import spaces
 import numpy as np
 import math
+import random
 
 def padder(observation): # Embeds the world in a square ( as it is common practice for input to a CNN to be square)
     padded_world = np.zeros((3, 79, 79))
@@ -14,11 +15,13 @@ def padder(observation): # Embeds the world in a square ( as it is common practi
     new_world = torch.tensor(padded_world) # Convert to tensor
     return new_world
 
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class MyAgent(AbstractAgent):
     def __init__(self, observation_space, action_space, **kwargs):
         global device
+
         self.observation_space = np.zeros((3,79,79)) # This is harc-docded here because this could not be done in in evaluation.py... Ensures that the input of the world is the correct size
         self.action_space = action_space
         self.train = kwargs.get("train", False)
@@ -38,7 +41,7 @@ class MyAgent(AbstractAgent):
         else:
             self.seeds = kwargs.get('seeds', None)
             self.Q = DQN(self.observation_space,self.action_space).to(device) # We only need the one network when testing
-            self.Q.load_state_dict(torch.load('The_weights4.pth',map_location=device)) # Load the pre-trained weights
+            self.Q.load_state_dict(torch.load('/content/The_weights7.pth',map_location=device)) # Load the pre-trained weights
 
     def optimise_td_loss(self):
         """
@@ -85,8 +88,9 @@ class MyAgent(AbstractAgent):
 
 
     def act(self, observation):
-        # Select action greedily from the Q-network given the state
         if self.train == False:
+            if random.random()< 0.45:
+                return np.random.randint(0,23)
             if torch.cuda.is_available() ==False:
                 observation = (padder(observation)).type(torch.FloatTensor) # convert to a cpu float tensor if an GPU  is not available
             else:
@@ -200,6 +204,10 @@ class DQN(nn.Module):
             nn.LeakyReLU(0.2, inplace = True))
 
         conv_out_size = self._get_conv_out(input_shape)
+        self.fc = nn.Sequential(
+            nn.Linear(conv_out_size, 1024),
+            nn.ReLU(),
+            nn.Linear(1024, action_space.n))
 
         # Set up the duelling network
         self.fc_layer_initial = nn.Sequential(
@@ -244,7 +252,7 @@ class DQN(nn.Module):
         val = self.value_layer(initial)
         adv = self.advantage_layer(initial)
 
-        q = val + adv - adv.mean(dim=-1, keepdim=True)
+        q = val + adv + adv.mean(dim=-1, keepdim=True)
         return q
 
     def reset_noise(self):
