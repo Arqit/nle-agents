@@ -38,16 +38,6 @@ $ conda create -n nle python=3.8
 $ conda activate nle
 $ pip install nle
 ```
-
-
-NOTE: If you want to extend / develop NLE, please install the package as follows:
-
-``` bash
-$ git clone https://github.com/facebookresearch/nle --recursive
-$ pip install -e ".[dev]"
-$ pre-commit install
-```
-
 ## To run agent 1
 To generate a ttyrec and stats.csv:
 ```bash
