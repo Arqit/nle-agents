@@ -1,6 +1,3 @@
-# TODO provide an apt description to all aspects of the project
-
-
 # Getting started
 
 Starting with NLE environments is extremely simple, provided one is familiar
@@ -53,5 +50,21 @@ $ pre-commit install
 ```
 
 ## To run agent 1
+To generate a ttyrec and stats.csv:
+```bash
+$ python3 src/agent1/save_run.py
+```
+To evaluate a random seed:
+```bash
+$ python3 src/agent1/evaluation.py
+```
+To run tests on the five seeds in the paper:
+```bash
+$ python3 src/agent1/RunTests.py
+```
+To use the agent import MyAgent.py and Node.py then create an agent by:
+```bash
+agent = MyAgent(env.observation_space, env.action_space, seeds=env.get_seeds())
+```
 
 ## To run agent 2
