@@ -1,7 +1,6 @@
 # Getting started
 
-Starting with NLE environments is extremely simple, provided one is familiar
-with other gym / RL environments.
+To run the agents on Nethack Learning Environment you need to install NLE. Agent 1 is a Monte-Carlo Tree Search agent and agent 2 is a Deep Q-Learning agent utilizing a Q-Network.
 
 
 ## Installation
