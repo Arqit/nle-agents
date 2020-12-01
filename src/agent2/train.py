@@ -47,14 +47,9 @@ if __name__ == '__main__':
     np.random.seed(seed)
     random.seed(seed)
 
-    env = gym.make("NetHackScout-v0",savedir = None)  # We disable saving the ttyrec files as it is unneccesary when training
-    env.penalty_step = -10
-    env.penalty_time = -1
-    env.seed(seed)
-    action_nums = [0,1,2,3,4,9,10,11,12,17,18,20,21,22]
-    env.__dict__['_actions'] = tuple([env.__dict__['_actions'][i] for i in action_nums])
-    env.action_space.n = len(action_nums)
+    env = gym.make("NetHackScore-v0",savedir = None)  # We disable saving the ttyrec files as it is unneccesary when training
 
+    env.seed(seed)
 
 
     print(env.__dict__)
