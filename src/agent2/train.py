@@ -11,6 +11,7 @@ from MyAgent import MyAgent
 import math
 import nle
 import wandb
+
 wandb.init(project="project_dqn")
 
 def padder(observation):
