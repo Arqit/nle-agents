@@ -9,10 +9,10 @@ import os
 from numpyencoder import NumpyEncoder
 #wandb.init(project="nethack-le")
 
-def run_episode(env, seed, agent, directory, load=False):
+def run_episode(env, seed, agent, directory, load=True):
     done = False
     episode_return = 0.0
-    env.seed(seed,seed)
+    env.seed(seed,seed,False)
     state = env.reset()
     count = 0
     if load:
@@ -20,6 +20,7 @@ def run_episode(env, seed, agent, directory, load=False):
         action_list = agent.actions
         for i in action_list:
             _,_,_,_ = env.step(i)
+            count+=1
     while not done:
         # pass state to agent and let agent decide action
         action = agent.act(None)
@@ -32,13 +33,13 @@ def run_episode(env, seed, agent, directory, load=False):
         #wandb.log({"Epsiode-Return": episode_return, "Seed" : seed})
         count+=1
         if count %10 == 0:
-            env.render()
+            #env.render()
             agent.save(episode_return,directory)
         print(action, episode_return)
     return episode_return
 
 seeds = [1]#,2,3,4,5]
-
+print(seeds)
 # Initialise environment
 env = gym.make("NetHackScore-v0")
 # Number of times each seed will be run
@@ -48,7 +49,7 @@ rewards = []
 directory = os.getcwd()
 for seed in seeds:
     seed_rewards = []
-    agent =  MyAgent(env.observation_space,env.action_space,seed=seed,depth = 100,env_name='NetHackScore-v0')
+    agent =  MyAgent(env.observation_space, env.action_space, seeds=env.get_seeds())
     #for i in range(num_runs):
     seed_rewards.append(run_episode(env, seed,agent, directory))
     #agent.save()

@@ -18,8 +18,8 @@ class Tree:
         states will get over written
         '''
         """ Saves to the tmp folder """
-    def save(self, reward,directory):
-        fileName=directory+"/data.json"
+    def save(self, reward,directory,seed):
+        fileName=directory+"/"+str(seed)+".json"
         f = open(fileName, "w+")
         self.dictionary[-1] = self.stateCount
         self.dictionary[-2] = reward
@@ -27,8 +27,8 @@ class Tree:
         print("saving nodes")
         f.close()
 
-    def load(self,directory):
-        fileName=directory+"/data.json"
+    def load(self,directory,seed):
+        fileName=directory+"/"+str(seed)+".json"
         file = open(fileName, "r")
         inDict = json.loads(file.read())
         file.close()
@@ -47,6 +47,7 @@ class Tree:
         self[index]["isTerminal"] = False
         self[index]["children"] = []
         self[index]["reward"] = 0
+        #self[index]["solo"] = 0
         self[index]["visits"] = 0
         self.stateCount += 1
 
@@ -73,7 +74,7 @@ class Tree:
         
         first = np.divide([self[self[current]["children"][i]]["reward"] for i in range(len(self[current]["children"]))],[self[self[current]["children"][i]]["visits"] for i in range(len(self[current]["children"]))])
         second = np.sqrt(np.divide(2*np.log(self[current]["visits"]),[self[self[current]["children"][i]]["visits"] for i in range(len(self[current]["children"]))]))
-        return self[current]["children"][np.argmax(first+c*second)]
+		return self[current]["children"][np.argmax(first+c*second)]
     
     def __del__(self):
         del self.dictionary

@@ -4,7 +4,7 @@ class AbstractAgent:
 
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         raise NotImplementedError()
 
     def act(self, observation):
