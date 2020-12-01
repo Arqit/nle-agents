@@ -8,12 +8,12 @@ import math
 import random
 
 def padder(observation): # Embeds the world in a square ( as it is common practice for input to a CNN to be square)
-    padded_world = np.zeros((3, 79, 79))
-    state = torch.cat((torch.cat((torch.unsqueeze(torch.from_numpy(observation['glyphs']), 0), torch.unsqueeze(torch.from_numpy(observation['colors']), 0))),
-                       torch.unsqueeze(torch.from_numpy(observation['chars']), 0))) # Stack the glyph, colors and char worlds
-    padded_world[:, 29:50, :] = state  # Pad the image so that it is square! -> Embed the world
-    new_world = torch.tensor(padded_world) # Convert to tensor
-    return new_world
+	padded_world = np.zeros((3, 79, 79))
+	state = torch.cat((torch.cat((torch.unsqueeze(torch.from_numpy(observation['glyphs']), 0), torch.unsqueeze(torch.from_numpy(observation['colors']), 0))),
+					   torch.unsqueeze(torch.from_numpy(observation['chars']), 0))) # Stack the glyph, colors and char worlds
+	padded_world[:, 29:50, :] = state  # Pad the image so that it is square! -> Embed the world
+	new_world = torch.tensor(padded_world) # Convert to tensor
+	return new_world
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
