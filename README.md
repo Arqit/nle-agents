@@ -1,6 +1,10 @@
-# Getting started
+# Using a DQN and Monte-Carlo Tree Search To Play NetHack
+This repository contains 2 reinforcement learning implementations to play the game of NetHack. Nethack is popular single-player, terminal-based,rogue-like game that is procedurally  generated,stochastic,  and  challenging. The NetHack Learning Environment (NLE) is a reinforcement learning environment based on NetHack and OpenAI's Gym framework and was designed to pose a challenge to the current state-of-the-art algorithms.Due to its unique procedurally-generated nature, this testbed environment encourages advancements in various aspects such as exploration,  planning  and  skill  acquisitionamongst many others. We present 2 RL algorithms in this repo, namely, a Deep Q-learning Network and a Monte-Carlo Tree Search (MCTS) algorithm. From these 2 approaches, the MCTS approach consistently achieves superior results (and is therefore the recommended implementation) as opposed to the DQN-based approach.
+<p align="center">
+  <img src="https://nethackwiki.com/mediawiki/images/b/b4/UnNetHack.png" width="600" height = "300">
+</p>
 
-To run the agents on Nethack Learning Environment you need to install NLE. Agent 1 is a Monte-Carlo Tree Search agent and agent 2 is a Deep Q-Learning agent utilizing a Q-Network.
+To run the agents on Nethack Learning Environment you need to install NLE.
 
 
 ## Installation
@@ -57,3 +61,16 @@ agent = MyAgent(env.observation_space, env.action_space, seeds=env.get_seeds())
 ```
 
 ## To run agent 2
+To train the DQN:
+```bash
+$ python3 src/agent2/train.py
+```
+To evaluate the model, please specify the seeds you would like to evaluate in `evaluation.py` and execute:
+```bash
+$ python3 src/agent2/evluation.py
+```
+## Proudly developed by:
+- Mayur Ranchod (1601745)
+- Wesley Earl Stander (1056114)
+- Joshua Greyling (1616664)
+- Agang Lebethe (1610338)
