@@ -6,6 +6,7 @@ from gym import spaces
 import numpy as np
 import math
 import random
+# from torchsummary import summary
 
 def padder(observation): # Embeds the world in a square ( as it is common practice for input to a CNN to be square)
 	padded_world = np.zeros((3, 79, 79))
@@ -37,6 +38,11 @@ class MyAgent(AbstractAgent):
             self.Q_hat = DQN(self.observation_space, action_space).to(device) # Target Q Network
             self.Q_hat.load_state_dict(self.Q.state_dict()) # Load the weights
             self.optimizer = torch.optim.RMSprop(self.Q.parameters(), lr=self.lr)#, momentum = 0.95) # We empirically discovered that RMSprop performs better than Adam
+
+            # for keys,vals in self.Q.named_parameters():
+            # 	print(keys,len(vals))
+            # summary(self.Q,(3,79,79))
+
 
         else:
             self.seeds = kwargs.get('seeds', None)
