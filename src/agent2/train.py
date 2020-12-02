@@ -10,6 +10,7 @@ import torch.nn.functional as F
 from MyAgent import MyAgent
 import math
 import nle
+import os
 
 def padder(observation):
     padded_world = np.zeros((3, 79, 79))
@@ -45,8 +46,9 @@ if __name__ == '__main__':
     seed = np.random.randint(0, 10000)
     np.random.seed(seed)
     random.seed(seed)
-
-    env = gym.make("NetHackScore-v0", savedir=None)  # We disable saving the ttyrec files as it is unneccesary when training
+    
+    savedir = os.getcwd()
+    env = gym.make("NetHackScore-v0",savedir = None)  # We disable saving the ttyrec files as it is unneccesary when training
     env.seed(seed)
     print(env.__dict__)
     replay_buffer = PrioritizedReplayBuffer(hyper_params['replay-buffer-size'], batch_size=hyper_params['batch-size'], alpha=hyper_params['alpha'])
@@ -104,8 +106,9 @@ if __name__ == '__main__':
             total_reward = 0
 
         if t % 400000 == 0:  # Periodically save a checkpoint of the network after every 400000 steps
-            agent.save_network(count)
+            agent.save_network(count,savedir)
             count += 1
+            break
 
         if t > hyper_params['learning-starts'] and t % hyper_params['learning-freq'] == 0:  # When learning commences
             ans = agent.optimise_td_loss()
@@ -122,4 +125,4 @@ if __name__ == '__main__':
             print('mean 100 episode reward: {}'.format(mean_100ep_reward))
             print('% time spent exploring: {}'.format(eps_threshold))
             print('********************************************************')
-    agent.save_network(999)
+    agent.save_network(999,savedir)
