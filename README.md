@@ -61,6 +61,7 @@ agent = MyAgent(env.observation_space, env.action_space, seeds=env.get_seeds())
 ```
 
 ## To run agent 2
+You may download the pre-trained weights ![here](https://drive.google.com/file/d/1T0nMAWe5EELxPNMQd0Rmpv5lQy29JglL/view):
 To train the DQN:
 ```bash
 $ python3 src/agent2/train.py
