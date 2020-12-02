@@ -6,7 +6,7 @@ from gym import spaces
 import numpy as np
 import math
 import random
-
+import os
 
 # from torchsummary import summary
 
@@ -50,8 +50,10 @@ class MyAgent(AbstractAgent):
 
         else:
             self.seeds = kwargs.get('seeds', None)
+            path = os.path.dirname(os.path.abspath(__file__))
+            model_params = os.path.join(path,'The_weights7.pth')
             self.Q = DQN(self.observation_space, self.action_space).to(device)  # We only need the one network when testing
-            self.Q.load_state_dict(torch.load('The_weights7.pth', map_location=device))  # Load the pre-trained weights
+            self.Q.load_state_dict(torch.load(model_params, map_location=device))  # Load the pre-trained weights
 
     def optimise_td_loss(self):
         """
@@ -92,9 +94,10 @@ class MyAgent(AbstractAgent):
         """
         self.Q_hat.load_state_dict(self.Q.state_dict())
 
-    def save_network(self, count):
+    def save_network(self, count,savedir):
         print("Model is saved")
-        torch.save(self.Q.state_dict(), "/content/drive/MyDrive/The_weights" + str(count) + ".pth")
+        place = os.path.join(savedir,"The_weights" + str(count) + ".pth")
+        torch.save(self.Q.state_dict(),place )
 
     def act(self, observation):
         if self.train == False:
