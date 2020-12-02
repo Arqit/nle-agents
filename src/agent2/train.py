@@ -109,7 +109,7 @@ if __name__ == '__main__':
 
 
         if t%400000==0: #Save the network after a set number of steps
-            agent.save_network(count)
+            agent.save_network(count,savedir)
             count+=1
 
         if t > hyper_params['learning-starts'] and t % hyper_params['learning-freq'] == 0: #When to start the learning process
