@@ -50,6 +50,7 @@ if __name__ == '__main__':
     savedir = os.getcwd()
     env = gym.make("NetHackScore-v0",savedir = None)  # We disable saving the ttyrec files as it is unneccesary when training
     env.seed(seed)
+
     print(env.__dict__)
     replay_buffer = PrioritizedReplayBuffer(hyper_params['replay-buffer-size'], batch_size=hyper_params['batch-size'], alpha=hyper_params['alpha'])
     agent = MyAgent(
@@ -99,18 +100,19 @@ if __name__ == '__main__':
         fraction = min(t / hyper_params['num-steps'], 1.0)
         agent.beta = agent.beta + fraction * (1.0 - agent.beta)
         if done:  # If an episode is done, store the reward and log it
+
             scores.append(total_reward)
             seed = np.random.randint(1, 10000)
             env.seed(seed, seed, False) # Update the seed everytime we are done with the environment to ensure the agent gets experience from a variety of different seeds
             state = padder(env.reset())
             total_reward = 0
 
-        if t % 400000 == 0:  # Periodically save a checkpoint of the network after every 400000 steps
-            agent.save_network(count,savedir)
-            count += 1
-            break
 
-        if t > hyper_params['learning-starts'] and t % hyper_params['learning-freq'] == 0:  # When learning commences
+        if t%400000==0: #Save the network after a set number of steps
+            agent.save_network(count)
+            count+=1
+
+        if t > hyper_params['learning-starts'] and t % hyper_params['learning-freq'] == 0: #When to start the learning process
             ans = agent.optimise_td_loss()
 
         if t > hyper_params['learning-starts'] and t % hyper_params['target-update-freq'] == 0:

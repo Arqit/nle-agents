@@ -8,6 +8,7 @@ import math
 import random
 import os
 
+
 # from torchsummary import summary
 
 def padder(observation):  # Embeds the world in a square ( as it is common practice for input to a CNN to be square)
@@ -47,6 +48,11 @@ class MyAgent(AbstractAgent):
             # for keys,vals in self.Q.named_parameters():
             # 	print(keys,len(vals))
             # summary(self.Q,(3,79,79))
+
+            # for keys,vals in self.Q.named_parameters():
+            # 	print(keys,len(vals))
+            # summary(self.Q,(3,79,79))
+
 
         else:
             self.seeds = kwargs.get('seeds', None)
