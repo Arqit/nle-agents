@@ -67,7 +67,7 @@ $ python3 src/agent2/train.py
 ```
 To evaluate the model, please specify the seeds you would like to evaluate in `evaluation.py` and execute:
 ```bash
-$ python3 src/agent2/evluation.py
+$ python3 src/agent2/evaluation.py
 ```
 ## Proudly developed by:
 - Mayur Ranchod (1601745)
