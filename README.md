@@ -61,7 +61,7 @@ agent = MyAgent(env.observation_space, env.action_space, seeds=env.get_seeds())
 ```
 ![Results](https://github.com/Arqit/nle-agents/tree/OptimizedImplementation/src/agent1) from the runs in the report (for the MCTS implementation)
 ## To run agent 2 (DQN)
-You may download the pre-trained weights ![here](https://drive.google.com/file/d/1vXTV7TNSSNkrkDtfwyrJ99hPz5i1511D/view?usp=sharing).<br>
+You may download the pre-trained weights [here](https://drive.google.com/file/d/1vXTV7TNSSNkrkDtfwyrJ99hPz5i1511D/view?usp=sharing).<br>
 To train the DQN:
 ```bash
 $ python3 src/agent2/train.py
