@@ -115,17 +115,20 @@ class MyAgent(AbstractAgent):
         return action
 
 
-class Noisy_Layer(nn.Module):  # JOSH, PLEASE COMMENT THIS!!!
+class Noisy_Layer(nn.Module):
     """
     A form of linear layer that can be used to inject random noise into model that is a different exploration policy than e-greedy"""
 
-    def __init__(self, input_size: int, output_size: int, init_std: float = 0.4):
+    def __init__(self, input_size, output_size, init_std = 0.4):
         super(Noisy_Layer, self).__init__()
 
         self.in_feat = input_size
         self.out_feat = output_size
         self.init_std = init_std
         # Set up the weight and bias for each of the nodes in the layer
+        #This works by essentially creating two linear layers, one for the sigma and one for the mu
+        #These layers are basically stacked on top of one another and the parameters are learned just like a normal liner layer
+        #We have one for each parameter of the normal distribution that we sample from.
         self.weight_mu = nn.Parameter(torch.FloatTensor(output_size, input_size))
         self.weight_sigma = nn.Parameter(torch.FloatTensor(output_size, input_size))
         self.register_buffer('weight_epsilon', torch.FloatTensor(output_size, input_size))
@@ -137,7 +140,7 @@ class Noisy_Layer(nn.Module):  # JOSH, PLEASE COMMENT THIS!!!
         self.reset_parameters()
         self.reset_noise()
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x):
         """
         Here is the forward pass of the network
         """
@@ -150,9 +153,10 @@ class Noisy_Layer(nn.Module):  # JOSH, PLEASE COMMENT THIS!!!
 
     def reset_parameters(self):
         """
-        Reset trainable network parameters (factorized gaussian noise).
+        Reset trainable network parameters with the use of factorized Gaussian Noise
         """
-
+        #This function is called when the layers are initialized
+        #It basically sets the layers to have random noise in them.
         mu_range = 1 / math.sqrt(self.in_feat)
         self.weight_mu.data.uniform_(-mu_range, mu_range)
         self.weight_sigma.data.fill_(
@@ -167,7 +171,8 @@ class Noisy_Layer(nn.Module):  # JOSH, PLEASE COMMENT THIS!!!
         """
         Make new noise.
         """
-
+        #This is called every time the model performs a learning step
+        #It resets the noise parameters so that the model does not essentially have a one-and-done exploration policy.
         epsilon_in = self.scale_noise(self.in_feat)
         epsilon_out = self.scale_noise(self.out_feat)
 
@@ -176,12 +181,12 @@ class Noisy_Layer(nn.Module):  # JOSH, PLEASE COMMENT THIS!!!
         self.bias_epsilon.copy_(epsilon_out)
 
     @staticmethod
-    def scale_noise(size: int) -> torch.Tensor:
+    def scale_noise(size):
         """
         Set scale to make noise (factorized gaussian noise).
         """
 
-        x = torch.FloatTensor(np.random.normal(loc=0.0, scale=1.0, size=size))
+        x = torch.FloatTensor(np.random.normal(loc=0.0, scale=1.0, size=size)) #This parameter can be adjusted but I think leaving it as default is okay
 
         return x.sign().mul(x.abs().sqrt())
 
