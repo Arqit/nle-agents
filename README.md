@@ -70,7 +70,22 @@ To evaluate the model, please specify the seeds you would like to evaluate in `e
 ```bash
 $ python3 src/agent2/evaluation.py
 ```
-
+To use the agent, import MyAgent.py, configure the hyper-parameter dictionary and create an agent by:
+```bash
+hyper_params = {...}
+agent = MyAgent(
+        env.observation_space,  # assuming that we are taking the world as input
+        env.action_space,
+        train=True,
+        replay_buffer=replay_buffer,
+        use_double_dqn=hyper_params['use-double-dqn'],
+        lr=hyper_params['learning-rate'],
+        batch_size=hyper_params['batch-size'],
+        discount_factor=hyper_params['discount-factor'],
+        beta=hyper_params['beta'],
+        prior_eps=hyper_params['prior_eps']
+    )
+```
 ## Proudly developed by:
 - Mayur Ranchod (1601745)
 - Wesley Earl Stander (1056114)
