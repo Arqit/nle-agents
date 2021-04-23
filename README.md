@@ -87,7 +87,7 @@ agent = MyAgent(
     )
 ```
 ## Proudly developed by:
-- Mayur Ranchod (1601745)
-- Wesley Earl Stander (1056114)
-- Joshua Greyling (1616664)
-- Agang Lebethe (1610338)
+- Mayur Ranchod 
+- Wesley Earl Stander 
+- Joshua Greyling 
+- Agang Lebethe 
